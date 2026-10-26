@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Serena Frontend"
+description = "A React and TypeScript frontend scaffold built with Vite, ready for further development."
+version = "1.0.0"
+id = "artifacts/serena-frontend"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23544
+
+[services.development]
+run = "pnpm --filter @workspace/serena-frontend run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/serena-frontend", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/serena-frontend/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23544"
+BASE_PATH = "/"
