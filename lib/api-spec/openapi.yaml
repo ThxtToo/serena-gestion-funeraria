@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: service-requests
+    description: Funeral service requests
 paths:
   /healthz:
     get:
@@ -24,6 +26,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /service-requests:
+    post:
+      operationId: createServiceRequest
+      tags: [service-requests]
+      summary: Create a service request
+      description: Creates a request for review; it does not confirm availability or the service.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceRequest"
+      responses:
+        "201":
+          description: Request created and pending review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequestCreated"
+        "400":
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +60,50 @@ components:
           type: string
       required:
         - status
-
+    CreateServiceRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        contactName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        contactPhone:
+          type: string
+          minLength: 5
+          maxLength: 30
+        serviceType:
+          type: string
+          minLength: 2
+          maxLength: 80
+        requestedDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          maxLength: 1000
+      required:
+        - contactName
+        - contactPhone
+        - serviceType
+    ServiceRequestCreated:
+      type: object
+      properties:
+        referenceCode:
+          type: string
+        status:
+          type: string
+          const: pendiente
+        message:
+          type: string
+      required:
+        - referenceCode
+        - status
+        - message
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
