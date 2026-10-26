@@ -110,3 +110,43 @@ No comenzar la implementación completa hasta revisar los requisitos, las decisi
 
 - 2026-10-26: estado inicial de documentación registrado.
 - Las futuras actualizaciones deben describir cambios verificables y tareas completadas.
+
+
+## 8. Estado de la documentación académica
+
+### 8.1. Documentos preparados
+
+Los siguientes documentos tienen una primera versión documentada en el repositorio:
+
+- [x] `README.md`: presentación general del proyecto.
+- [x] `AGENTS.md`: instrucciones de trabajo para asistentes de IA.
+- [x] `docs/REQUISITOS.md`: requisitos funcionales y no funcionales.
+- [x] `docs/ARQUITECTURA.md`: arquitectura técnica propuesta.
+- [x] `docs/DECISIONES_TECNICAS.md`: registro de decisiones técnicas.
+- [x] `docs/CONTRATO_DEL_AGENTE.md`: contrato de herramientas del agente de IA.
+- [x] `docs/CASOS_DE_USO.md`: casos de uso principales.
+- [x] `docs/MODELO_DATOS.md`: modelo conceptual de datos.
+- [x] `docs/PLAN_DE_PRUEBAS.md`: plan inicial de pruebas.
+- [x] `docs/METODOLOGIA.md`: metodología de trabajo propuesta.
+
+**Nota:** las casillas indican que los documentos fueron preparados y guardados en el repositorio según el registro de trabajo. No significan que todos los requisitos hayan sido validados por la funeraria o el profesor.
+
+### 8.2. Validaciones pendientes
+
+- [ ] Contrastar la metodología con las instrucciones exactas del profesor.
+- [ ] Confirmar los requisitos con la organización, si se dispone de acceso a ella.
+- [ ] Revisar los casos de uso y sus reglas de negocio.
+- [ ] Validar el modelo de datos antes de crear las tablas definitivas.
+- [ ] Elegir y documentar el mecanismo de autenticación.
+- [ ] Confirmar la configuración de desarrollo y ejecución.
+- [ ] Definir los criterios de aceptación de la entrega académica.
+
+### 8.3. Estado de implementación
+
+**Estado actual:** planificación y documentación inicial.
+
+La aplicación no debe considerarse implementada únicamente porque se hayan preparado sus documentos. Cada módulo se marcará como completado después de desarrollarlo, ejecutarlo y verificar sus pruebas.
+
+### 8.4. Próximo hito
+
+Revisar los documentos existentes y contrastarlos con las instrucciones de la asignatura. Después, preparar la estructura inicial del repositorio de código y configurar el entorno de desarrollo, sin integrar todavía todas las funcionalidades de Serena.
