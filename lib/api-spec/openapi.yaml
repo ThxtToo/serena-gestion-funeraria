@@ -82,8 +82,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServiceRequestStatus"
+        "400":
+          description: Invalid reference code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "404":
           description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
