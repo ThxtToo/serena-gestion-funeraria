@@ -36,6 +36,24 @@ export interface ServiceRequestCreated {
   message: string;
 }
 
+export type ServiceRequestStatusStatus = typeof ServiceRequestStatusStatus[keyof typeof ServiceRequestStatusStatus];
+
+
+export const ServiceRequestStatusStatus = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface ServiceRequestStatus {
+  referenceCode: string;
+  status: ServiceRequestStatusStatus;
+  message: string;
+}
+
 export interface ApiError {
   error: string;
 }
+

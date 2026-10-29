@@ -47,3 +47,23 @@ export const CreateServiceRequestResponse = zod.object({
   "status": zod.literal("pendiente"),
   "message": zod.string()
 })
+
+
+/**
+ * Returns the current status of a request without exposing contact details.
+ * @summary Consult a service request by reference
+ */
+export const getServiceRequestPathReferenceCodeRegExp = new RegExp('^SER-[A-Fa-f0-9]{10}$');
+
+
+export const GetServiceRequestParams = zod.object({
+  "referenceCode": zod.coerce.string().regex(getServiceRequestPathReferenceCodeRegExp)
+})
+
+export const GetServiceRequestResponse = zod.object({
+  "referenceCode": zod.string(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "message": zod.string()
+})
+
+

@@ -28,7 +28,8 @@ import type {
   ApiError,
   CreateServiceRequest,
   HealthStatus,
-  ServiceRequestCreated
+  ServiceRequestCreated,
+  ServiceRequestStatus
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -248,3 +249,106 @@ export const useCreateServiceRequest = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getCreateServiceRequestMutationOptions(options), queryClient);
     }
+
+export const getGetServiceRequestUrl = (referenceCode: string,) => {
+
+
+
+
+  return `/api/service-requests/${referenceCode}`
+}
+
+/**
+ * Returns the current status of a request without exposing contact details.
+ * @summary Consult a service request by reference
+ */
+export const getServiceRequest = async (referenceCode: string, options?: Parameters<typeof customFetch>[1]): Promise<ServiceRequestStatus> => {
+
+  return customFetch<ServiceRequestStatus>(getGetServiceRequestUrl(referenceCode),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetServiceRequestQueryKey = (referenceCode: string,) => {
+    return [
+    `/api/service-requests/${referenceCode}`
+    ] as const;
+    }
+
+
+export const getGetServiceRequestQueryOptions = <TData = Awaited<ReturnType<typeof getServiceRequest>>, TError = ErrorType<ApiError>>(referenceCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetServiceRequestQueryKey(referenceCode);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getServiceRequest>>> = ({ signal }) => getServiceRequest(referenceCode, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: referenceCode !== null && referenceCode !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetServiceRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getServiceRequest>>>
+export type GetServiceRequestQueryError = ErrorType<ApiError>
+
+
+export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServiceRequest>>, TError = ErrorType<ApiError>>(
+ referenceCode: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getServiceRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getServiceRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServiceRequest>>, TError = ErrorType<ApiError>>(
+ referenceCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getServiceRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getServiceRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServiceRequest>>, TError = ErrorType<ApiError>>(
+ referenceCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Consult a service request by reference
+ */
+
+export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServiceRequest>>, TError = ErrorType<ApiError>>(
+ referenceCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetServiceRequestQueryOptions(referenceCode,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+

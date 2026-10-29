@@ -10,3 +10,5 @@ export * from './apiError';
 export * from './createServiceRequest';
 export * from './healthStatus';
 export * from './serviceRequestCreated';
+export * from './serviceRequestStatus';
+export * from './serviceRequestStatusStatus';

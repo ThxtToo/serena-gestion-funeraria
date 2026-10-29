@@ -1,3 +1,4 @@
+
 openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
@@ -12,6 +13,7 @@ tags:
     description: Health operations
   - name: service-requests
     description: Funeral service requests
+
 paths:
   /healthz:
     get:
@@ -26,6 +28,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
   /service-requests:
     post:
       operationId: createServiceRequest
@@ -51,6 +54,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /service-requests/{referenceCode}:
+    get:
+      operationId: getServiceRequest
+      tags: [service-requests]
+      summary: Consult a service request by reference
+      description: Returns the current status of a request without exposing contact details.
+      parameters:
+        - name: referenceCode
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^SER-[A-Fa-f0-9]{10}$'
+            
+      responses:
+        "200":
+          description: Request found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequestStatus"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -60,6 +98,7 @@ components:
           type: string
       required:
         - status
+
     CreateServiceRequest:
       type: object
       additionalProperties: false
@@ -86,6 +125,7 @@ components:
         - contactName
         - contactPhone
         - serviceType
+
     ServiceRequestCreated:
       type: object
       properties:
@@ -100,6 +140,27 @@ components:
         - referenceCode
         - status
         - message
+
+    ServiceRequestStatus:
+      type: object
+      properties:
+        referenceCode:
+          type: string
+        status:
+          type: string
+          enum:
+            - pendiente
+            - en_revision
+            - confirmada
+            - rechazada
+            - cancelada
+        message:
+          type: string
+      required:
+        - referenceCode
+        - status
+        - message
+
     ApiError:
       type: object
       properties:
