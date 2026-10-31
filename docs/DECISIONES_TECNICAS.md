@@ -191,6 +191,23 @@ Las IA y los colaboradores no deben modificar una decisión aceptada sin explica
 
 **Criterio:** Minimizar la complejidad y evitar gastos o servicios innecesarios.
 
+## DT-016 — Estados y transiciones de solicitudes
+
+**Estado:** Aceptada parcialmente.
+
+**Decisión:** Las solicitudes utilizarán los estados definidos en el esquema actual: `pendiente`, `en_revision`, `confirmada`, `rechazada` y `cancelada`.
+
+**Reglas de autorización acordadas:**
+
+- El administrador podrá confirmar, rechazar y cancelar solicitudes.
+- Los empleados autorizados también podrán confirmar, rechazar y cancelar solicitudes.
+- Los empleados sin autorización no podrán modificar el estado de las solicitudes.
+- Una solicitud confirmada podrá cancelarse por el administrador o por un empleado autorizado.
+- La confirmación no será automática al registrar una solicitud.
+- La confirmación estará sujeta a la validación de los datos y la disponibilidad del servicio.
+
+**Pendiente de definición:** Establecer la matriz completa de transiciones permitidas, las condiciones para cada cambio de estado y el registro de los motivos de rechazo o cancelación.
+
 ## Regla para futuras decisiones
 
 Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los datos o el alcance debe registrar:
