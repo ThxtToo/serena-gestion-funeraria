@@ -28,40 +28,71 @@ Este documento describe el diseño conceptual. No representa tablas implementada
 
 ### 3.1 User — Usuario
 
-Representa a una persona con cuenta en el sistema.
+Representa a una persona autorizada para acceder al panel privado de Serena.
 
 Campos conceptuales:
-- `id`: identificador único.
-- `name`: nombre de demostración.
-- `email`: correo utilizado para iniciar sesión o contactar, si corresponde.
-- `passwordHash`: hash seguro de la contraseña, si se utiliza autenticación local.
-- `roleId`: referencia al rol.
+- `id`: identificador único (UUID).
+- `fullName`: nombre completo del usuario.
+- `email`: correo electrónico utilizado para iniciar sesión.
+- `passwordHash`: hash seguro de la contraseña.
+- `roleId`: referencia al rol asignado.
 - `isActive`: indica si la cuenta está habilitada.
+- `mustChangePassword`: indica si debe cambiar la contraseña en el próximo acceso.
 - `createdAt`: fecha de creación.
-- `updatedAt`: fecha de actualización.
+- `updatedAt`: fecha de última actualización.
 
 Restricciones:
-- El correo deberá cumplir las reglas de unicidad definidas.
-- Las contraseñas no se guardarán en texto plano.
-- Los campos definitivos dependerán del mecanismo de autenticación seleccionado.
+- El correo electrónico será único.
+- Cada usuario tendrá exactamente un rol.
+- Las contraseñas nunca se almacenarán en texto plano.
+- Los usuarios desactivados no podrán iniciar sesión.
+- Desactivar una cuenta no eliminará sus registros históricos.
+- Al desactivar una cuenta se revocarán todas sus sesiones activas.
+- Al cambiar la contraseña se revocarán las demás sesiones activas del usuario.
 
 ### 3.2 Role — Rol
 
-Representa un conjunto de permisos.
+Representa el perfil de autorización de un usuario.
 
 Campos conceptuales:
 - `id`: identificador único.
-- `name`: nombre del rol.
-- `description`: descripción del rol.
+- `name`: nombre único del rol.
+- `description`: descripción de sus responsabilidades.
 
-Roles iniciales por evaluar:
-- Administrador.
-- Empleado.
-- Consulta restringida, si resulta necesaria.
+Roles iniciales:
+- `administrador`: administra usuarios, roles, recursos, inventario y operaciones autorizadas.
+- `empleado`: consulta y actualiza operaciones según los permisos asignados.
 
-La autorización efectiva se comprobará en el backend.
+Restricciones:
+- Cada usuario tendrá exactamente un rol.
+- Un mismo rol podrá estar asignado a varios usuarios.
+- La autorización efectiva se comprobará en el backend.
+- No habrá registro público de usuarios.
+- Solo el administrador podrá crear cuentas de empleados.
 
-### 3.3 Resource — Recurso
+### 3.3 Session — Sesión
+
+Representa una sesión autenticada de un usuario en el panel privado de Serena.
+
+Campos conceptuales:
+- `id`: identificador único.
+- `userId`: referencia al usuario propietario de la sesión.
+- `tokenHash`: hash seguro del token de sesión.
+- `createdAt`: fecha de creación.
+- `lastActivityAt`: fecha de última actividad.
+- `expiresAt`: fecha límite de expiración.
+
+Restricciones:
+- Las sesiones se almacenarán en PostgreSQL.
+- El token original no se almacenará en la base de datos.
+- La duración máxima inicial será de 8 horas.
+- Las sesiones expirarán después de 30 minutos de inactividad.
+- Al cerrar sesión se revocará la sesión correspondiente.
+- Al desactivar un usuario se revocarán todas sus sesiones activas.
+- Al cambiar la contraseña se revocarán las demás sesiones activas.
+- Las sesiones expiradas o revocadas no permitirán acceder al panel privado.
+
+### 3.4 Resource — Recurso
 
 Representa un recurso operativo que puede utilizarse para prestar un servicio.
 
@@ -82,7 +113,7 @@ Ejemplos de tipos:
 
 Los tipos y estados definitivos deben validarse con las necesidades de la funeraria.
 
-### 3.4 InventoryItem — Artículo de inventario
+### 3.5 InventoryItem — Artículo de inventario
 
 Representa un artículo cuya existencia se controla por cantidad.
 
@@ -106,7 +137,7 @@ Ejemplos:
 
 La forma de controlar artículos serializados o unidades individuales deberá definirse antes de implementar inventario avanzado.
 
-### 3.5 InventoryMovement — Movimiento de inventario
+### 3.6 InventoryMovement — Movimiento de inventario
 
 Registra una entrada, salida o ajuste autorizado.
 
@@ -125,13 +156,31 @@ Reglas:
 - El cambio de existencia y el registro del movimiento deben mantenerse consistentes.
 - Los ajustes deben estar autorizados y justificados.
 
-### 3.6 ServiceRequest — Solicitud de servicio
+### 3.7 Client — Cliente
+
+Representa a una persona que solicita uno o varios servicios funerarios.
+
+Campos conceptuales:
+- `id`: identificador único.
+- `fullName`: nombre completo.
+- `contactPhone`: teléfono de contacto.
+- `email`: correo electrónico, opcional.
+- `createdAt`: fecha de creación.
+- `updatedAt`: fecha de última actualización.
+
+Restricciones:
+- No necesita una cuenta ni contraseña para solicitar servicios.
+- Puede estar asociado a varias solicitudes.
+- Solo se almacenarán los datos personales necesarios para gestionar el servicio.
+
+### 3.8 ServiceRequest — Solicitud de servicio
 
 Representa una solicitud iniciada por un cliente o registrada por personal autorizado.
 
 Campos conceptuales:
 - `id`: identificador interno.
 - `referenceCode`: referencia pública o de consulta, con protección adecuada.
+- `clientId`: referencia opcional al cliente registrado.
 - `requesterName`: nombre de demostración del solicitante, cuando sea necesario.
 - `requesterContact`: contacto ficticio, cuando sea necesario.
 - `serviceType`: tipo de servicio solicitado.
@@ -140,14 +189,18 @@ Campos conceptuales:
 - `createdAt`: fecha de creación.
 - `updatedAt`: fecha de actualización.
 
+
 Reglas:
+- La solicitud podrá registrarse sin una ficha permanente de cliente.
+- Cuando no exista un cliente registrado, se conservarán los datos mínimos de contacto del solicitante.
+- Una solicitud podrá vincularse posteriormente a una ficha de cliente mediante un proceso autorizado.
 - La referencia deberá ser única y difícil de adivinar si se utiliza para localizar solicitudes.
 - La referencia no sustituye un mecanismo de autorización.
 - El estado inicial debe ser explícito.
 - Registrar una solicitud no implica confirmar el servicio.
 - Los cambios de estado deben respetar las transiciones autorizadas.
 
-### 3.7 ResourceAssignment — Asignación de recurso
+### 3.9 ResourceAssignment — Asignación de recurso
 
 Relaciona una solicitud con un recurso durante un período.
 
@@ -168,7 +221,7 @@ Reglas:
 - Las comprobaciones deben contemplar operaciones concurrentes.
 - Las asignaciones canceladas no deben bloquear recursos si las reglas indican que están liberados.
 
-### 3.8 Insurer — Aseguradora de demostración
+### 3.10 Insurer — Aseguradora de demostración
 
 Representa una aseguradora ficticia utilizada para la demostración.
 
@@ -179,7 +232,7 @@ Campos conceptuales:
 
 No representa una integración con una aseguradora real.
 
-### 3.9 DemoPolicy — Póliza ficticia
+### 3.11 DemoPolicy — Póliza ficticia
 
 Representa una póliza ficticia para demostrar una consulta.
 
@@ -195,7 +248,7 @@ Reglas:
 - No deben presentarse como validaciones reales.
 - La respuesta solo debe incluir los campos necesarios.
 
-### 3.10 AuditEvent — Evento de auditoría
+### 3.12 AuditEvent — Evento de auditoría
 
 Registra operaciones relevantes para revisión.
 
@@ -213,7 +266,7 @@ Reglas:
 - Limitar el acceso a los registros.
 - Definir la política de conservación antes de utilizar datos reales.
 
-### 3.11 AgentToolLog — Registro de herramientas del agente
+### 3.13 AgentToolLog — Registro de herramientas del agente
 
 Registra la ejecución de herramientas del agente cuando sea necesario para depuración y auditoría.
 
@@ -230,6 +283,12 @@ No se deben registrar secretos ni conversaciones completas por defecto. La neces
 ## 4. Relaciones principales
 
 - Un rol puede estar asociado a muchos usuarios.
+- Cada usuario tendrá exactamente un rol.
+- Un usuario puede tener muchas sesiones.
+- Cada sesión pertenece a un único usuario.
+- Un cliente puede estar asociado a muchas solicitudes.
+- Una solicitud puede estar vinculada a cero o un cliente mediante `clientId`.
+- Una solicitud puede registrarse sin una ficha permanente de cliente.
 - Un artículo de inventario puede tener muchos movimientos.
 - Un usuario autorizado puede realizar muchos movimientos de inventario.
 - Una solicitud puede tener varias asignaciones a recursos.
@@ -245,6 +304,8 @@ El siguiente diagrama representa las relaciones principales. Es conceptual y deb
 ```mermaid
 erDiagram
     ROLE ||--o{ USER : asigna
+    USER ||--o{ SESSION : mantiene
+    CLIENT o|--o{ SERVICE_REQUEST : vincula
     USER ||--o{ INVENTORY_MOVEMENT : realiza
     INVENTORY_ITEM ||--o{ INVENTORY_MOVEMENT : registra
     SERVICE_REQUEST ||--o{ RESOURCE_ASSIGNMENT : solicita
@@ -255,9 +316,7 @@ erDiagram
 
 ## 6. Decisiones pendientes
 
-- Definir si se necesita una entidad separada para clientes.
-- Definir el mecanismo de autenticación y las tablas relacionadas.
-- Establecer los estados y las transiciones de las solicitudes.
+- Establecer los estados y las transiciones autorizadas de las solicitudes.
 - Definir cómo se gestionan los recursos sin cantidad, como salas y vehículos.
 - Determinar si los artículos de inventario necesitan lotes o unidades individuales.
 - Establecer la política de conservación de registros de auditoría.
@@ -268,9 +327,13 @@ erDiagram
 ## 7. Criterios de aceptación
 
 El modelo estará listo para implementarse cuando:
+
 1. Las entidades cubran los requisitos aprobados.
 2. Las relaciones y restricciones estén definidas.
 3. Se hayan revisado las reglas de disponibilidad e inventario.
 4. Se hayan establecido los permisos y los datos mínimos.
-5. El modelo haya sido revisado con los casos de uso.
-6. Se pueda traducir a tablas y migraciones sin ambigüedades importantes.
+5. El modelo contemple la autenticación, los roles y la gestión de sesiones.
+6. Las solicitudes puedan registrarse con o sin una ficha permanente de cliente.
+7. Se hayan definido las reglas de privacidad y protección de datos personales.
+8. El modelo haya sido revisado con los casos de uso.
+9. Se pueda traducir a tablas y migraciones sin ambigüedades importantes.

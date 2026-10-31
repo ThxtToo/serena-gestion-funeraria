@@ -152,11 +152,36 @@ Las IA y los colaboradores no deben modificar una decisión aceptada sin explica
 
 ## DT-014 — Autenticación y sesiones
 
-**Estado:** Pendiente.
+**Estado:** Aceptada.
 
-**Decisión por tomar:** Seleccionar el mecanismo de autenticación, gestión de sesiones, protección de contraseñas y control de roles.
+**Decisión:** Utilizar autenticación propia mediante correo electrónico y contraseña, administrada por el backend de Serena.
 
-**Criterio:** Priorizar una solución apropiada para una aplicación web con un panel privado y operaciones sensibles.
+**Motivo:** Mantener el control de las cuentas, los roles y las sesiones dentro de la aplicación, sin depender de la identidad de la plataforma de desarrollo.
+
+**Configuración acordada:**
+
+- Inicio de sesión mediante correo electrónico y contraseña.
+- No habrá registro público de usuarios.
+- Los roles iniciales serán `administrador` y `empleado`.
+- Solo el administrador podrá crear cuentas de empleados.
+- Las cuentas nuevas utilizarán una contraseña temporal y exigirán cambiarla en el primer acceso.
+- Las contraseñas se almacenarán mediante hashes seguros, nunca en texto plano.
+- La primera cuenta administradora se creará mediante un comando de inicialización ejecutado en el backend.
+- Las sesiones se almacenarán en PostgreSQL.
+- Duración máxima inicial de la sesión: 8 horas.
+- Expiración por inactividad: 30 minutos.
+- Las cookies utilizarán `HttpOnly`, `Secure` en producción y `SameSite=Lax`.
+- El backend verificará la autenticación y los permisos en cada operación privada.
+
+**Consecuencias:**
+
+- Se necesitarán entidades para usuarios, roles y sesiones.
+- La autorización deberá implementarse en el backend.
+- Se deberán probar el inicio y cierre de sesión, la expiración, la desactivación de cuentas y los permisos por rol.
+- Los tiempos de sesión podrán ajustarse después de las pruebas de seguridad y usabilidad.
+
+**Pendiente de implementación:** Definir los esquemas definitivos, el mecanismo de almacenamiento de sesiones, la protección contra ataques de autenticación y el procedimiento de inicialización del administrador.
+
 
 ## DT-015 — Estrategia de despliegue
 
