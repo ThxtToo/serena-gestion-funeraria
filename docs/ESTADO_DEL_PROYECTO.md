@@ -137,15 +137,15 @@ Los siguientes documentos tienen una primera versión documentada en el reposito
 - [ ] Confirmar los requisitos con la organización, si se dispone de acceso a ella.
 - [ ] Revisar los casos de uso y sus reglas de negocio.
 - [ ] Validar el modelo de datos antes de crear las tablas definitivas.
-- [ ] Elegir y documentar el mecanismo de autenticación.
+- [x] Elegir y documentar el mecanismo de autenticación.
 - [ ] Confirmar la configuración de desarrollo y ejecución.
 - [ ] Definir los criterios de aceptación de la entrega académica.
 
 ### 8.3. Estado de implementación
 
-**Estado actual:** planificación y documentación inicial.
+**Estado actual:** autenticación propia, sesiones y administración de cuentas implementadas y verificadas. Los demás módulos principales siguen en planificación y documentación inicial.
 
-La aplicación no debe considerarse implementada únicamente porque se hayan preparado sus documentos. Cada módulo se marcará como completado después de desarrollarlo, ejecutarlo y verificar sus pruebas.
+La aplicación no debe considerarse completa únicamente porque la autenticación esté implementada. Cada módulo se marcará como completado después de desarrollarlo, ejecutarlo y verificar sus pruebas.
 
 ### 8.4. Próximo hito
 

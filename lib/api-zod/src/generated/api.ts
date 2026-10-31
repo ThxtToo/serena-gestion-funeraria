@@ -67,3 +67,154 @@ export const GetServiceRequestResponse = zod.object({
 })
 
 
+/**
+ * @summary Sign in to Serena
+ */
+export const loginBodyEmailMax = 254;
+
+export const loginBodyPasswordMax = 128;
+
+
+
+export const LoginBody = zod.object({
+  "email": zod.string().email().max(loginBodyEmailMax),
+  "password": zod.string().min(1).max(loginBodyPasswordMax)
+})
+
+export const LoginResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "mustChangePassword": zod.boolean()
+}),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Revoke the current session
+ */
+export const LogoutResponse = zod.object({
+  "success": zod.literal(true)
+})
+
+
+/**
+ * @summary Return the current authenticated session
+ */
+export const GetAuthSessionResponse = zod.object({
+  "user": zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "mustChangePassword": zod.boolean()
+}),
+  "createdAt": zod.coerce.date(),
+  "expiresAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Change the current user's password
+ */
+export const changePasswordBodyCurrentPasswordMax = 128;
+
+export const changePasswordBodyNewPasswordMin = 12;
+export const changePasswordBodyNewPasswordMax = 128;
+
+
+
+export const ChangePasswordBody = zod.object({
+  "currentPassword": zod.string().min(1).max(changePasswordBodyCurrentPasswordMax),
+  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin).max(changePasswordBodyNewPasswordMax)
+})
+
+export const ChangePasswordResponse = zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "mustChangePassword": zod.boolean()
+})
+
+
+/**
+ * @summary List employee accounts
+ */
+export const ListEmployeesResponse = zod.object({
+  "employees": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "isActive": zod.boolean(),
+  "mustChangePassword": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "lastLoginAt": zod.coerce.date().nullable()
+}))
+})
+
+
+/**
+ * @summary Create an employee account with a temporary password
+ */
+export const createEmployeeBodyEmailMax = 254;
+
+export const createEmployeeBodyFullNameMin = 2;
+export const createEmployeeBodyFullNameMax = 120;
+
+
+
+export const CreateEmployeeBody = zod.object({
+  "email": zod.string().email().max(createEmployeeBodyEmailMax),
+  "fullName": zod.string().min(createEmployeeBodyFullNameMin).max(createEmployeeBodyFullNameMax)
+})
+
+export const createEmployeeResponseTemporaryPasswordMin = 20;
+
+
+
+export const CreateEmployeeResponse = zod.object({
+  "employee": zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "isActive": zod.boolean(),
+  "mustChangePassword": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "lastLoginAt": zod.coerce.date().nullable()
+}),
+  "temporaryPassword": zod.string().min(createEmployeeResponseTemporaryPasswordMin)
+})
+
+
+/**
+ * @summary Activate or deactivate an employee account
+ */
+export const SetEmployeeActiveParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const SetEmployeeActiveBody = zod.object({
+  "isActive": zod.boolean()
+})
+
+export const SetEmployeeActiveResponse = zod.object({
+  "employee": zod.object({
+  "id": zod.string().uuid(),
+  "email": zod.string().email(),
+  "fullName": zod.string(),
+  "role": zod.enum(['administrador', 'empleado']),
+  "isActive": zod.boolean(),
+  "mustChangePassword": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "lastLoginAt": zod.coerce.date().nullable()
+})
+})
+
+

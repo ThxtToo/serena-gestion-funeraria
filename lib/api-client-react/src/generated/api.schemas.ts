@@ -53,6 +53,104 @@ export interface ServiceRequestStatus {
   message: string;
 }
 
+export type AuthenticatedUserRole = typeof AuthenticatedUserRole[keyof typeof AuthenticatedUserRole];
+
+
+export const AuthenticatedUserRole = {
+  administrador: 'administrador',
+  empleado: 'empleado',
+} as const;
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: AuthenticatedUserRole;
+  mustChangePassword: boolean;
+}
+
+export type AdminEmployeeRole = typeof AdminEmployeeRole[keyof typeof AdminEmployeeRole];
+
+
+export const AdminEmployeeRole = {
+  administrador: 'administrador',
+  empleado: 'empleado',
+} as const;
+
+export interface AdminEmployee {
+  id: string;
+  email: string;
+  fullName: string;
+  role: AdminEmployeeRole;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
+  /** @nullable */
+  lastLoginAt: string | null;
+}
+
+export interface AuthenticatedSession {
+  user: AuthenticatedUser;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface LoginInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  password: string;
+}
+
+export interface ChangePasswordInput {
+  /**
+     * @minLength 1
+     * @maxLength 128
+     */
+  currentPassword: string;
+  /**
+     * @minLength 12
+     * @maxLength 128
+     */
+  newPassword: string;
+}
+
+export interface CreateEmployeeInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  fullName: string;
+}
+
+export interface SetEmployeeActiveInput {
+  isActive: boolean;
+}
+
+export const LogoutResultValue = {
+  success: true,
+} as const;
+export type LogoutResult = typeof LogoutResultValue;
+
+export interface EmployeeList {
+  employees: AdminEmployee[];
+}
+
+export interface EmployeeCreateResult {
+  employee: AdminEmployee;
+  /** @minLength 20 */
+  temporaryPassword: string;
+}
+
+export interface EmployeeStatusResponse {
+  employee: AdminEmployee;
+}
+
 export interface ApiError {
   error: string;
 }

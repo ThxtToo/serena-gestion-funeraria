@@ -1,8 +1,8 @@
 
 # Serena — Modelo conceptual de datos
 
-**Versión:** 0.1  
-**Estado:** Propuesta para revisión  
+**Versión:** 0.2  
+**Estado:** Autenticación implementada; las demás entidades siguen siendo conceptuales  
 **Base de datos prevista:** PostgreSQL  
 **Acceso a datos previsto:** Drizzle ORM
 
@@ -10,7 +10,7 @@
 
 Definir las entidades principales de Serena, sus responsabilidades y las relaciones necesarias para implementar los requisitos funcionales.
 
-Este documento describe el diseño conceptual. No representa tablas implementadas ni migraciones ejecutadas.
+Este documento describe el diseño conceptual del dominio. Las tablas de autenticación, roles, sesiones y limitación de intentos ya están implementadas en PostgreSQL; las demás entidades siguen siendo propuestas.
 
 ## 2. Principios de diseño
 
@@ -34,15 +34,17 @@ Campos conceptuales:
 - `id`: identificador único (UUID).
 - `fullName`: nombre completo del usuario.
 - `email`: correo electrónico utilizado para iniciar sesión.
-- `passwordHash`: hash seguro de la contraseña.
+- `passwordHash`: hash scrypt de la contraseña con sal aleatoria.
 - `roleId`: referencia al rol asignado.
 - `isActive`: indica si la cuenta está habilitada.
 - `mustChangePassword`: indica si debe cambiar la contraseña en el próximo acceso.
 - `createdAt`: fecha de creación.
 - `updatedAt`: fecha de última actualización.
+- `lastLoginAt`: fecha del último inicio de sesión, si existe.
 
 Restricciones:
 - El correo electrónico será único.
+- El correo se normalizará sin espacios y en minúsculas.
 - Cada usuario tendrá exactamente un rol.
 - Las contraseñas nunca se almacenarán en texto plano.
 - Los usuarios desactivados no podrán iniciar sesión.
@@ -55,8 +57,7 @@ Restricciones:
 Representa el perfil de autorización de un usuario.
 
 Campos conceptuales:
-- `id`: identificador único.
-- `name`: nombre único del rol.
+- `id`: nombre único del rol (`administrador` o `empleado`).
 - `description`: descripción de sus responsabilidades.
 
 Roles iniciales:
@@ -85,6 +86,7 @@ Campos conceptuales:
 Restricciones:
 - Las sesiones se almacenarán en PostgreSQL.
 - El token original no se almacenará en la base de datos.
+- `tokenHash` almacenará el SHA-256 del token aleatorio de sesión.
 - La duración máxima inicial será de 8 horas.
 - Las sesiones expirarán después de 30 minutos de inactividad.
 - Al cerrar sesión se revocará la sesión correspondiente.
@@ -200,7 +202,30 @@ Reglas:
 - Registrar una solicitud no implica confirmar el servicio.
 - Los cambios de estado deben respetar las transiciones autorizadas.
 
-### 3.9 ResourceAssignment — Asignación de recurso
+### 3.9 ServiceRequestStatusHistory — Historial de estados de solicitudes
+
+Registra cada cambio de estado de una solicitud para conservar su trazabilidad.
+
+Campos conceptuales:
+- `id`: identificador único del registro.
+- `serviceRequestId`: solicitud a la que pertenece el cambio.
+- `previousStatus`: estado anterior; será nulo en el registro inicial.
+- `newStatus`: nuevo estado asignado.
+- `changedByUserId`: usuario responsable del cambio; podrá ser nulo cuando el cambio corresponda al registro inicial automático de la solicitud.
+- `reason`: motivo del cambio, obligatorio para rechazos y cancelaciones.
+- `createdAt`: fecha y hora del cambio.
+
+Reglas:
+- Una solicitud podrá tener múltiples registros históricos.
+- Cada registro pertenecerá a una sola solicitud.
+- La creación de una solicitud generará un registro inicial con `previousStatus` nulo y `newStatus` igual a `pendiente`.
+- Cada cambio de estado autorizado generará un nuevo registro.
+- El historial no se sobrescribirá ni eliminará mediante las operaciones normales de la aplicación.
+- Los cambios deberán registrar el usuario responsable y la fecha y hora.
+- El backend validará las transiciones permitidas antes de registrar cada cambio.
+- El motivo será obligatorio para los rechazos y las cancelaciones.
+
+### 3.10 ResourceAssignment — Asignación de recurso
 
 Relaciona una solicitud con un recurso durante un período.
 
@@ -221,7 +246,7 @@ Reglas:
 - Las comprobaciones deben contemplar operaciones concurrentes.
 - Las asignaciones canceladas no deben bloquear recursos si las reglas indican que están liberados.
 
-### 3.10 Insurer — Aseguradora de demostración
+### 3.11 Insurer — Aseguradora de demostración
 
 Representa una aseguradora ficticia utilizada para la demostración.
 
@@ -232,7 +257,7 @@ Campos conceptuales:
 
 No representa una integración con una aseguradora real.
 
-### 3.11 DemoPolicy — Póliza ficticia
+### 3.12 DemoPolicy — Póliza ficticia
 
 Representa una póliza ficticia para demostrar una consulta.
 
@@ -248,7 +273,7 @@ Reglas:
 - No deben presentarse como validaciones reales.
 - La respuesta solo debe incluir los campos necesarios.
 
-### 3.12 AuditEvent — Evento de auditoría
+### 3.13 AuditEvent — Evento de auditoría
 
 Registra operaciones relevantes para revisión.
 
@@ -266,7 +291,7 @@ Reglas:
 - Limitar el acceso a los registros.
 - Definir la política de conservación antes de utilizar datos reales.
 
-### 3.13 AgentToolLog — Registro de herramientas del agente
+### 3.14 AgentToolLog — Registro de herramientas del agente
 
 Registra la ejecución de herramientas del agente cuando sea necesario para depuración y auditoría.
 
@@ -280,6 +305,22 @@ Campos conceptuales:
 
 No se deben registrar secretos ni conversaciones completas por defecto. La necesidad de conservar mensajes deberá evaluarse por separado.
 
+### 3.15 AuthLoginAttempt — Control de intentos de autenticación
+
+Almacena únicamente los contadores necesarios para limitar intentos de inicio de sesión.
+
+Campos implementados:
+- `keyHash`: HMAC de un identificador de correo o dirección IP; no conserva el dato original.
+- `failureCount`: intentos fallidos dentro de la ventana.
+- `windowStartedAt`: inicio de la ventana de 15 minutos.
+- `blockedUntil`: fin del bloqueo temporal, si se alcanzó el límite.
+- `updatedAt`: fecha del último intento registrado.
+
+Reglas implementadas:
+- Se permiten hasta cinco fallos por identificador o dirección IP antes de bloquear nuevos intentos durante 15 minutos.
+- Las claves HMAC utilizan `SESSION_SECRET`.
+- Los registros antiguos se eliminan después de 24 horas.
+
 ## 4. Relaciones principales
 
 - Un rol puede estar asociado a muchos usuarios.
@@ -289,6 +330,10 @@ No se deben registrar secretos ni conversaciones completas por defecto. La neces
 - Un cliente puede estar asociado a muchas solicitudes.
 - Una solicitud puede estar vinculada a cero o un cliente mediante `clientId`.
 - Una solicitud puede registrarse sin una ficha permanente de cliente.
+- Una solicitud puede tener muchos registros históricos de estado.
+- Cada registro histórico pertenece a una única solicitud.
+- Un usuario puede realizar muchos cambios de estado en solicitudes.
+- El usuario responsable de un registro histórico puede ser nulo cuando se trate del registro inicial automático.
 - Un artículo de inventario puede tener muchos movimientos.
 - Un usuario autorizado puede realizar muchos movimientos de inventario.
 - Una solicitud puede tener varias asignaciones a recursos.
@@ -306,17 +351,25 @@ erDiagram
     ROLE ||--o{ USER : asigna
     USER ||--o{ SESSION : mantiene
     CLIENT o|--o{ SERVICE_REQUEST : vincula
+    SERVICE_REQUEST ||--o{ SERVICE_REQUEST_STATUS_HISTORY : registra
+    USER o|--o{ SERVICE_REQUEST_STATUS_HISTORY : realiza
     USER ||--o{ INVENTORY_MOVEMENT : realiza
     INVENTORY_ITEM ||--o{ INVENTORY_MOVEMENT : registra
     SERVICE_REQUEST ||--o{ RESOURCE_ASSIGNMENT : solicita
     RESOURCE ||--o{ RESOURCE_ASSIGNMENT : recibe
     USER ||--o{ AUDIT_EVENT : genera
     INSURER ||--o{ DEMO_POLICY : contiene
+    AUTH_LOGIN_ATTEMPT {
+        string keyHash PK
+        integer failureCount
+        timestamp windowStartedAt
+        timestamp blockedUntil
+        timestamp updatedAt
+    }
 ```
 
 ## 6. Decisiones pendientes
 
-- Establecer los estados y las transiciones autorizadas de las solicitudes.
 - Definir cómo se gestionan los recursos sin cantidad, como salas y vehículos.
 - Determinar si los artículos de inventario necesitan lotes o unidades individuales.
 - Establecer la política de conservación de registros de auditoría.

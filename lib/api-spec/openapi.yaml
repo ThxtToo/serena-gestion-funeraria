@@ -13,6 +13,10 @@ tags:
     description: Health operations
   - name: service-requests
     description: Funeral service requests
+  - name: authentication
+    description: Serena staff authentication and session management
+  - name: employee-administration
+    description: Administrator-only employee account management
 
 paths:
   /healthz:
@@ -101,7 +105,254 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /auth/login:
+    post:
+      operationId: login
+      tags: [authentication]
+      summary: Sign in to Serena
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedSession"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Invalid credentials or inactive account
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          description: Too many sign-in attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [authentication]
+      summary: Revoke the current session
+      responses:
+        "200":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutResult"
+        "403":
+          description: Cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/session:
+    get:
+      operationId: getAuthSession
+      tags: [authentication]
+      summary: Return the current authenticated session
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedSession"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /auth/password:
+    patch:
+      operationId: changePassword
+      tags: [authentication]
+      summary: Change the current user's password
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthenticatedUser"
+        "400":
+          description: Invalid input or current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/users:
+    get:
+      operationId: listEmployees
+      tags: [employee-administration]
+      summary: List employee accounts
+      security:
+        - SerenaSession: []
+      responses:
+        "200":
+          description: Employee accounts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createEmployee
+      tags: [employee-administration]
+      summary: Create an employee account with a temporary password
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEmployeeInput"
+      responses:
+        "201":
+          description: Employee created; the temporary password is returned once
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeCreateResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required or cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Email already in use
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/users/{userId}/active:
+    patch:
+      operationId: setEmployeeActive
+      tags: [employee-administration]
+      summary: Activate or deactivate an employee account
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetEmployeeActiveInput"
+      responses:
+        "200":
+          description: Employee status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeStatusResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required or cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Employee not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
+  securitySchemes:
+    SerenaSession:
+      type: apiKey
+      in: cookie
+      name: serena_session
   schemas:
     HealthStatus:
       type: object
@@ -172,6 +423,155 @@ components:
         - referenceCode
         - status
         - message
+
+    AuthenticatedUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [administrador, empleado]
+        mustChangePassword:
+          type: boolean
+      required: [id, email, fullName, role, mustChangePassword]
+
+    AdminEmployee:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [administrador, empleado]
+        isActive:
+          type: boolean
+        mustChangePassword:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: [string, "null"]
+          format: date-time
+      required:
+        - id
+        - email
+        - fullName
+        - role
+        - isActive
+        - mustChangePassword
+        - createdAt
+        - lastLoginAt
+
+    AuthenticatedSession:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthenticatedUser"
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required: [user, createdAt, expiresAt]
+
+    LoginInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+      required: [email, password]
+
+    ChangePasswordInput:
+      type: object
+      additionalProperties: false
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+          maxLength: 128
+        newPassword:
+          type: string
+          minLength: 12
+          maxLength: 128
+      required: [currentPassword, newPassword]
+
+    CreateEmployeeInput:
+      type: object
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        fullName:
+          type: string
+          minLength: 2
+          maxLength: 120
+      required: [email, fullName]
+
+    SetEmployeeActiveInput:
+      type: object
+      additionalProperties: false
+      properties:
+        isActive:
+          type: boolean
+      required: [isActive]
+
+    LogoutResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+          const: true
+      required: [success]
+
+    EmployeeList:
+      type: object
+      properties:
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminEmployee"
+      required: [employees]
+
+    EmployeeCreateResult:
+      type: object
+      properties:
+        employee:
+          $ref: "#/components/schemas/AdminEmployee"
+        temporaryPassword:
+          type: string
+          minLength: 20
+      required: [employee, temporaryPassword]
+
+    EmployeeStatusResponse:
+      type: object
+      properties:
+        employee:
+          $ref: "#/components/schemas/AdminEmployee"
+      required: [employee]
 
     ApiError:
       type: object

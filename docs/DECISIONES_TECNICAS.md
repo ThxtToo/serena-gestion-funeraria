@@ -180,7 +180,18 @@ Las IA y los colaboradores no deben modificar una decisión aceptada sin explica
 - Se deberán probar el inicio y cierre de sesión, la expiración, la desactivación de cuentas y los permisos por rol.
 - Los tiempos de sesión podrán ajustarse después de las pruebas de seguridad y usabilidad.
 
-**Pendiente de implementación:** Definir los esquemas definitivos, el mecanismo de almacenamiento de sesiones, la protección contra ataques de autenticación y el procedimiento de inicialización del administrador.
+**Implementación actual:**
+
+- PostgreSQL almacena los roles, usuarios, sesiones y contadores de intentos de autenticación.
+- Las contraseñas se derivan con `scrypt` (`N=16384`, `r=8`, `p=1`, clave de 64 bytes y sal aleatoria de 16 bytes).
+- El token de sesión es aleatorio; PostgreSQL conserva solo su hash SHA-256.
+- La cookie `serena_session` usa `HttpOnly`, `SameSite=Lax`, `Secure` en producción y alcance `/api`.
+- Cada solicitud privada valida que la cuenta esté activa y que la sesión no haya superado ocho horas ni 30 minutos de inactividad.
+- Cinco intentos fallidos por correo o IP activan un bloqueo de 15 minutos; los identificadores se conservan como HMAC y se depuran después de 24 horas.
+- El comando `pnpm --filter @workspace/api-server run bootstrap-admin` solicita nombre, correo y contraseña inicial sin mostrar esta última.
+- Las cuentas de empleado reciben una contraseña temporal aleatoria, devuelta una sola vez al administrador, y deben cambiarla en el primer acceso.
+
+La recuperación de contraseñas y la auditoría detallada de accesos no forman parte de esta implementación.
 
 
 ## DT-015 — Estrategia de despliegue
