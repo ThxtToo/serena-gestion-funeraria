@@ -197,16 +197,36 @@ Las IA y los colaboradores no deben modificar una decisión aceptada sin explica
 
 **Decisión:** Las solicitudes utilizarán los estados definidos en el esquema actual: `pendiente`, `en_revision`, `confirmada`, `rechazada` y `cancelada`.
 
-**Reglas de autorización acordadas:**
+**Matriz de transiciones permitidas:**
+
+| Estado actual | Estados siguientes permitidos |
+|---|---|
+| `pendiente` | `en_revision`, `cancelada` |
+| `en_revision` | `confirmada`, `rechazada`, `cancelada` |
+| `confirmada` | `cancelada` |
+| `rechazada` | Ninguno |
+| `cancelada` | Ninguno |
+
+**Reglas de autorización:**
 
 - El administrador podrá confirmar, rechazar y cancelar solicitudes.
 - Los empleados autorizados también podrán confirmar, rechazar y cancelar solicitudes.
-- Los empleados sin autorización no podrán modificar el estado de las solicitudes.
-- Una solicitud confirmada podrá cancelarse por el administrador o por un empleado autorizado.
-- La confirmación no será automática al registrar una solicitud.
+- Los empleados sin autorización no podrán modificar el estado.
+- La confirmación y el rechazo requieren que la solicitud haya pasado por `en_revision`.
+- Una solicitud nueva comenzará en estado `pendiente`.
 - La confirmación estará sujeta a la validación de los datos y la disponibilidad del servicio.
 
-**Pendiente de definición:** Establecer la matriz completa de transiciones permitidas, las condiciones para cada cambio de estado y el registro de los motivos de rechazo o cancelación.
+**Reglas de rechazo y cancelación:**
+
+- Las solicitudes rechazadas o canceladas serán definitivas y no podrán reabrirse.
+- Una solicitud confirmada podrá cancelarse.
+- Todo rechazo exigirá un motivo obligatorio.
+- Toda cancelación exigirá un motivo obligatorio, independientemente del estado anterior.
+- Se registrará quién realizó cada cambio de estado y la fecha y hora.
+- Los motivos quedarán asociados al historial de la solicitud.
+- Si se necesita atender nuevamente una solicitud rechazada o cancelada, se creará una nueva solicitud vinculada a la anterior.
+
+**Pendiente de implementación:** Definir el mecanismo de almacenamiento del historial de estados, validar las transiciones en el backend y establecer las pruebas de permisos, motivos obligatorios y trazabilidad.
 
 ## Regla para futuras decisiones
 
