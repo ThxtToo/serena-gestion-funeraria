@@ -359,7 +359,11 @@ Reglas implementadas:
 - Un recurso puede aparecer en muchas asignaciones a lo largo del tiempo.
 - Una aseguradora ficticia puede tener muchas pólizas ficticias.
 - Un usuario puede estar relacionado con muchos eventos de auditoría.
-- Una ejecución del agente puede producir uno o más registros de herramientas.
+- Un usuario puede originar muchas ejecuciones registradas en `AgentToolLog`.
+- Cada registro de `AgentToolLog` puede estar asociado a cero o un usuario.
+- Una solicitud de servicio puede estar relacionada con muchos registros de `AgentToolLog`.
+- Cada registro de `AgentToolLog` puede estar asociado a cero o una solicitud de servicio.
+- `requestId` es un identificador de correlación técnica y no representa una relación entre entidades.
 
 ## 5. Diagrama conceptual
 
@@ -377,6 +381,8 @@ erDiagram
     SERVICE_REQUEST ||--o{ RESOURCE_ASSIGNMENT : solicita
     RESOURCE ||--o{ RESOURCE_ASSIGNMENT : recibe
     USER ||--o{ AUDIT_EVENT : genera
+    USER o|--o{ AGENT_TOOL_LOG : origina
+    SERVICE_REQUEST o|--o{ AGENT_TOOL_LOG : relaciona
     INSURER ||--o{ DEMO_POLICY : contiene
     AUTH_LOGIN_ATTEMPT {
         string keyHash PK
