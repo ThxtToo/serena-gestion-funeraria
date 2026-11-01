@@ -82,6 +82,7 @@ Campos conceptuales:
 - `createdAt`: fecha de creación.
 - `lastActivityAt`: fecha de última actividad.
 - `expiresAt`: fecha límite de expiración.
+- `revokedAt`: fecha de revocación de la sesión; será nula mientras no haya sido revocada.
 
 Restricciones:
 - Las sesiones se almacenarán en PostgreSQL.
@@ -120,6 +121,10 @@ Reglas:
 - Cada recurso tiene su propio estado operativo.
 - Su disponibilidad depende de su estado operativo y de las asignaciones vigentes.
 - Los recursos reutilizables que deban identificarse individualmente se registran aquí, no como existencias cuantificables.
+- `name`, `type` y `status` serán obligatorios.
+- `status` utilizará valores controlados.
+- Un recurso no podrá asignarse si su estado operativo no permite su utilización.
+- Los recursos con asignaciones o registros históricos asociados no se eliminarán físicamente; se gestionarán mediante su estado.
 
 ### 3.5 InventoryItem — Artículo de inventario
 
@@ -148,6 +153,9 @@ Reglas:
 - Las entradas, salidas y ajustes deben registrarse mediante InventoryMovement.
 - Los artículos consumibles se gestionan en esta entidad.
 - Los bienes reutilizables e identificables individualmente se gestionan en Resource.
+- `quantity` y `minimumQuantity` no podrán tener valores negativos.
+- `unit` será obligatoria y consistente para cada artículo.
+- Cada entrada, salida o ajuste actualizará las existencias y registrará su movimiento dentro de una misma transacción de base de datos.
 
 La forma de controlar artículos serializados o unidades individuales deberá definirse antes de implementar inventario avanzado.
 
@@ -159,16 +167,24 @@ Campos conceptuales:
 - `id`: identificador único.
 - `inventoryItemId`: artículo relacionado.
 - `type`: tipo de movimiento.
-- `quantity`: cantidad del movimiento.
+- `quantity`: cantidad del movimiento o existencia real establecida en un ajuste.
+- `previousQuantity`: existencia registrada antes del movimiento.
+- `newQuantity`: existencia resultante después del movimiento.
 - `reason`: motivo.
 - `performedByUserId`: usuario responsable.
 - `createdAt`: fecha del movimiento.
 
 Reglas:
-- La cantidad debe ser válida y positiva; el tipo define si suma, resta o ajusta.
+- En las entradas, la cantidad del movimiento debe ser estrictamente mayor que cero.
+- En las salidas, la cantidad debe ser estrictamente mayor que cero y no podrá superar las existencias disponibles.
+- En los ajustes, la existencia real podrá ser igual o mayor que cero.
+- El tipo de movimiento determina cómo se actualiza la existencia.
 - Cada movimiento debe conservarse en el historial.
 - El cambio de existencia y el registro del movimiento deben mantenerse consistentes.
 - Los ajustes deben estar autorizados y justificados.
+- En un ajuste, `quantity` representará la existencia real determinada mediante conteo.
+- Cada ajuste conservará `previousQuantity` y `newQuantity` para mantener la trazabilidad.
+- En entradas y salidas también se conservarán las existencias anterior y resultante.
 
 ### 3.7 Client — Cliente
 
@@ -183,8 +199,10 @@ Campos conceptuales:
 - `updatedAt`: fecha de última actualización.
 
 Restricciones:
-- No necesita una cuenta ni contraseña para solicitar servicios.
 - Puede estar asociado a varias solicitudes.
+- `fullName` y `contactPhone` serán obligatorios.
+- `email` será opcional.
+- No necesita una cuenta ni contraseña para solicitar servicios.
 - Solo se almacenarán los datos personales necesarios para gestionar el servicio.
 
 ### 3.8 ServiceRequest — Solicitud de servicio
@@ -195,8 +213,8 @@ Campos conceptuales:
 - `id`: identificador interno.
 - `referenceCode`: referencia pública o de consulta, con protección adecuada.
 - `clientId`: referencia opcional al cliente registrado.
-- `requesterName`: nombre de demostración del solicitante, cuando sea necesario.
-- `requesterContact`: contacto ficticio, cuando sea necesario.
+- `requesterName`: nombre de la persona que solicita el servicio, cuando no exista un cliente asociado.
+- `requesterContact`: medio de contacto del solicitante, cuando no exista un cliente asociado.
 - `serviceType`: tipo de servicio solicitado.
 - `status`: estado actual.
 - `notes`: observaciones limitadas a lo necesario.
@@ -205,10 +223,13 @@ Campos conceptuales:
 
 
 Reglas:
-- La solicitud podrá registrarse sin una ficha permanente de cliente.
+- `clientId` será opcional y podrá ser nulo cuando no exista una ficha permanente de cliente.
+- Cuando exista un cliente asociado, se evitará duplicar innecesariamente sus datos en la solicitud.
 - Cuando no exista un cliente registrado, se conservarán los datos mínimos de contacto del solicitante.
+- La referencia será generada por el backend, única y difícil de adivinar si se utiliza para localizar solicitudes.
+- Consultar una solicitud mediante su referencia no otorgará por sí solo acceso a información privada.
+- La solicitud podrá registrarse sin una ficha permanente de cliente.
 - Una solicitud podrá vincularse posteriormente a una ficha de cliente mediante un proceso autorizado.
-- La referencia deberá ser única y difícil de adivinar si se utiliza para localizar solicitudes.
 - La referencia no sustituye un mecanismo de autorización.
 - El estado inicial debe ser explícito.
 - Registrar una solicitud no implica confirmar el servicio.
@@ -232,8 +253,10 @@ Reglas:
 - Cada registro pertenecerá a una sola solicitud.
 - La creación de una solicitud generará un registro inicial con `previousStatus` nulo y `newStatus` igual a `pendiente`.
 - Cada cambio de estado autorizado generará un nuevo registro.
-- El historial no se sobrescribirá ni eliminará mediante las operaciones normales de la aplicación.
-- Los cambios deberán registrar el usuario responsable y la fecha y hora.
+- El historial no podrá modificarse ni eliminarse mediante operaciones normales de la aplicación ni mediante acciones administrativas ordinarias.
+- Los cambios posteriores al registro inicial deberán identificar al usuario responsable y registrar la fecha y hora.
+- `changedByUserId` será nulo exclusivamente en el registro inicial automático de la solicitud.
+- La actualización del estado actual de `ServiceRequest` y la creación del registro histórico correspondiente se realizarán dentro de una misma transacción de PostgreSQL.
 - El backend validará las transiciones permitidas antes de registrar cada cambio.
 - El motivo será obligatorio para los rechazos y las cancelaciones.
 
@@ -252,11 +275,12 @@ Campos conceptuales:
 - `createdAt`: fecha de creación.
 
 Reglas:
-- El período debe ser válido.
-- Se debe comprobar la disponibilidad en el backend.
-- No se deben permitir asignaciones incompatibles para el mismo recurso.
-- Las comprobaciones deben contemplar operaciones concurrentes.
-- Las asignaciones canceladas no deben bloquear recursos si las reglas indican que están liberados.
+- El período debe ser válido: `startAt` deberá ser anterior a `endAt`.
+- Se debe comprobar en el backend que el estado operativo del recurso permita su utilización.
+- No se permitirán asignaciones activas del mismo recurso cuyos períodos se superpongan.
+- La disponibilidad deberá comprobarse y la asignación registrarse mediante operaciones protegidas frente a solicitudes concurrentes en PostgreSQL.
+- Las asignaciones canceladas conservarán su registro histórico y no bloquearán el recurso cuando la cancelación implique su liberación.
+- La cancelación de una asignación no deberá eliminar el registro ni su trazabilidad.
 
 ### 3.11 Insurer — Aseguradora de demostración
 
@@ -281,13 +305,16 @@ Campos conceptuales:
 - `isDemoData`: indicador de datos ficticios.
 
 Reglas:
-- Los registros deben estar identificados como demostrativos.
-- No deben presentarse como validaciones reales.
+- `policyCode` deberá ser único entre las pólizas de demostración.
+- `insurerId` deberá referenciar una aseguradora existente.
+- `demoStatus` utilizará valores controlados definidos por el sistema, no texto libre.
+- Los registros deberán identificarse claramente como datos ficticios.
+- Las consultas de estas pólizas tendrán fines exclusivamente demostrativos y no constituirán una validación real de cobertura ni una aprobación de servicios por parte de una aseguradora.
 - La respuesta solo debe incluir los campos necesarios.
 
 ### 3.13 AuditEvent — Evento de auditoría
 
-Registra operaciones relevantes para revisión.
+Registra operaciones relevantes para revisión y trazabilidad del sistema.
 
 Campos conceptuales:
 - `id`: identificador único.
@@ -295,13 +322,17 @@ Campos conceptuales:
 - `action`: tipo de operación.
 - `entityType`: tipo de entidad afectada.
 - `entityId`: identificador del registro afectado, cuando corresponda.
-- `createdAt`: fecha del evento.
+- `createdAt`: fecha y hora del evento.
 - `details`: información limitada y segura sobre la operación.
+- `result`: resultado de la operación, indicando si fue exitosa o fallida.
 
 Reglas:
-- No registrar contraseñas, claves API ni tokens.
-- Limitar el acceso a los registros.
-- Definir la política de conservación antes de utilizar datos reales.
+- Los registros se conservarán durante toda la vida útil del sistema, sin eliminación automática.
+- El acceso de consulta estará restringido al administrador.
+- Los registros no podrán modificarse ni eliminarse mediante operaciones normales de la aplicación ni mediante acciones administrativas ordinarias.
+- No se registrarán contraseñas, claves API, tokens ni credenciales.
+- `details` contendrá únicamente información necesaria para la auditoría y evitará datos personales innecesarios.
+- Cada evento registrará el resultado de la operación.
 
 ### 3.14 AgentToolLog — Registro de herramientas del agente
 
@@ -379,6 +410,7 @@ erDiagram
     USER ||--o{ INVENTORY_MOVEMENT : realiza
     INVENTORY_ITEM ||--o{ INVENTORY_MOVEMENT : registra
     SERVICE_REQUEST ||--o{ RESOURCE_ASSIGNMENT : solicita
+    USER ||--o{ RESOURCE_ASSIGNMENT : realiza
     RESOURCE ||--o{ RESOURCE_ASSIGNMENT : recibe
     USER ||--o{ AUDIT_EVENT : genera
     USER o|--o{ AGENT_TOOL_LOG : origina
@@ -395,12 +427,10 @@ erDiagram
 
 ## 6. Decisiones pendientes
 
-- Definir cómo se gestionan los recursos sin cantidad, como salas y vehículos.
-- Determinar si los artículos de inventario necesitan lotes o unidades individuales.
-- Establecer la política de conservación de registros de auditoría.
-- Decidir qué datos del agente se registrarán.
-- Definir las restricciones para evitar asignaciones simultáneas incompatibles.
-- Establecer las reglas de privacidad y los datos mínimos necesarios.
+- Validar con el personal funerario los tipos y estados operativos definitivos de los recursos.
+- Validar las unidades de medida y los tipos de artículos de inventario.
+- Revisar las reglas de privacidad y conservación de datos personales según el contexto académico y la normativa aplicable.
+- Revisar el modelo completo contra los casos de uso y confirmar que no falten restricciones.
 
 ## 7. Criterios de aceptación
 
