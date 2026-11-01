@@ -271,3 +271,33 @@ Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los da
 - No será posible rastrear inicialmente el origen o destino de cada lote.
 - No se podrá identificar individualmente cada unidad de un artículo.
 - El modelo podrá ampliarse posteriormente si las necesidades operativas lo justifican.
+
+## DT-018 — Política de conservación y acceso a registros de auditoría
+
+**Estado:** Aceptada.
+
+**Problema:** Definir cómo se conservarán, protegerán y consultarán los registros de auditoría del sistema.
+
+**Alternativas consideradas:**
+- Eliminar registros automáticamente después de un período definido.
+- Conservar los registros sin eliminación automática.
+- Permitir que los usuarios autorizados modifiquen o eliminen registros.
+
+**Decisión:** Los registros de auditoría se conservarán sin eliminación automática durante la vida útil del sistema. Su consulta estará restringida al administrador y no podrán modificarse ni eliminarse mediante las operaciones normales del sistema.
+
+**Datos que se registrarán:**
+- Usuario responsable de la acción.
+- Acción realizada.
+- Entidad afectada.
+- Fecha y hora.
+- Resultado de la operación.
+
+**Reglas de privacidad y seguridad:**
+- No se almacenarán contraseñas, tokens ni credenciales en los registros.
+- Se evitará registrar datos personales que no sean necesarios para la auditoría.
+- El acceso a los registros completos estará restringido al administrador.
+
+**Consecuencias y riesgos:**
+- El volumen de registros aumentará con el uso del sistema.
+- Será necesario considerar mecanismos de respaldo y protección contra alteraciones.
+- Si Serena se utiliza en una funeraria real, la política deberá revisarse conforme a los requisitos legales aplicables.
