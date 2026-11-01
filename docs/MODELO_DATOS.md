@@ -305,17 +305,24 @@ Reglas:
 
 ### 3.14 AgentToolLog — Registro de herramientas del agente
 
-Registra la ejecución de herramientas del agente cuando sea necesario para depuración y auditoría.
+Registra las ejecuciones de herramientas del agente para facilitar la depuración y la trazabilidad técnica. Es independiente de `AuditEvent`, que registra operaciones relevantes del sistema.
 
 Campos conceptuales:
-- `id`: identificador único.
-- `toolName`: nombre de la herramienta.
+- `id`: identificador único de la ejecución.
+- `toolName`: nombre de la herramienta ejecutada.
+- `userId`: usuario que originó la ejecución, cuando pueda identificarse; opcional.
+- `serviceRequestId`: solicitud de servicio relacionada, cuando corresponda; opcional.
+- `requestId`: identificador de correlación técnica, cuando corresponda; no sustituye a `serviceRequestId`.
 - `status`: resultado de la ejecución.
-- `requestId`: identificador de correlación, cuando corresponda.
-- `createdAt`: fecha de ejecución.
+- `createdAt`: fecha y hora de ejecución.
 - `safeErrorCode`: código de error seguro, si ocurre un fallo.
 
-No se deben registrar secretos ni conversaciones completas por defecto. La necesidad de conservar mensajes deberá evaluarse por separado.
+Reglas:
+- No registrar contraseñas, claves API, tokens ni credenciales.
+- No almacenar conversaciones completas ni argumentos sensibles de las herramientas por defecto.
+- Conservar únicamente la información necesaria para depuración y trazabilidad.
+- Representar los errores mediante códigos seguros, sin exponer detalles internos sensibles.
+- Controlar el acceso a estos registros y su volumen.
 
 ### 3.15 AuthLoginAttempt — Control de intentos de autenticación
 
