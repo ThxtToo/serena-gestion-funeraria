@@ -301,3 +301,38 @@ Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los da
 - El volumen de registros aumentará con el uso del sistema.
 - Será necesario considerar mecanismos de respaldo y protección contra alteraciones.
 - Si Serena se utiliza en una funeraria real, la política deberá revisarse conforme a los requisitos legales aplicables.
+
+## DT-019 — Registro de actividad de las herramientas del agente
+
+**Estado:** Aceptada.
+
+**Problema:** Definir qué información debe conservarse cuando el agente de inteligencia artificial ejecuta herramientas del sistema y cómo evitar el almacenamiento innecesario de información sensible.
+
+**Alternativas consideradas:**
+- No registrar las ejecuciones de herramientas.
+- Registrar únicamente el nombre de la herramienta y el resultado.
+- Registrar también el contexto mínimo necesario para relacionar las ejecuciones con usuarios y solicitudes de servicio.
+
+**Decisión:** Serena mantendrá un registro de las ejecuciones de herramientas del agente mediante `AgentToolLog`, separado de los eventos generales de auditoría almacenados en `AuditEvent`.
+
+**Datos que se registrarán:**
+- Identificador único de la ejecución.
+- Nombre de la herramienta ejecutada.
+- Usuario que originó la ejecución, cuando pueda identificarse (`userId`).
+- Solicitud de servicio relacionada, cuando corresponda (`serviceRequestId`).
+- Identificador de correlación técnica (`requestId`), cuando corresponda.
+- Resultado de la ejecución.
+- Fecha y hora.
+- Código de error seguro, si ocurre un fallo.
+
+**Reglas de privacidad y seguridad:**
+- `requestId` será exclusivamente un identificador de correlación técnica; no sustituirá a `serviceRequestId`.
+- No se almacenarán contraseñas, claves API, tokens ni credenciales.
+- No se almacenarán conversaciones completas ni argumentos sensibles de las herramientas por defecto.
+- Solo se conservará la información necesaria para depuración y trazabilidad.
+- Los errores se representarán mediante códigos seguros, sin exponer detalles internos sensibles.
+
+**Consecuencias y riesgos:**
+- El registro facilitará la depuración y el seguimiento de las ejecuciones del agente.
+- Será necesario controlar el acceso a estos registros y su volumen.
+- `AgentToolLog` no sustituirá a `AuditEvent`: cada entidad tendrá una finalidad diferenciada.
