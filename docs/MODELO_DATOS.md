@@ -115,6 +115,12 @@ Ejemplos de tipos:
 
 Los tipos y estados definitivos deben validarse con las necesidades de la funeraria.
 
+Reglas:
+- Cada registro representa un recurso individual e identificable.
+- Cada recurso tiene su propio estado operativo.
+- Su disponibilidad depende de su estado operativo y de las asignaciones vigentes.
+- Los recursos reutilizables que deban identificarse individualmente se registran aquí, no como existencias cuantificables.
+
 ### 3.5 InventoryItem — Artículo de inventario
 
 Representa un artículo cuya existencia se controla por cantidad.
@@ -136,6 +142,12 @@ Ejemplos:
 - Urnas.
 - Materiales.
 - Equipos consumibles, si corresponde.
+
+Reglas:
+- La existencia se controla mediante cantidades y unidades de medida.
+- Las entradas, salidas y ajustes deben registrarse mediante InventoryMovement.
+- Los artículos consumibles se gestionan en esta entidad.
+- Los bienes reutilizables e identificables individualmente se gestionan en Resource.
 
 La forma de controlar artículos serializados o unidades individuales deberá definirse antes de implementar inventario avanzado.
 

@@ -248,3 +248,26 @@ Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los da
 3. La opción elegida y sus motivos.
 4. Las consecuencias y los riesgos.
 5. El estado de la decisión.
+
+## DT-017 — Control de inventario por cantidades y unidades
+
+**Estado:** Aceptada.
+
+**Problema:** Definir el nivel de trazabilidad necesario para controlar las existencias de inventario en la versión inicial de Serena.
+
+**Alternativas consideradas:**
+- Controlar existencias mediante cantidades y unidades de medida.
+- Implementar seguimiento por lotes.
+- Registrar individualmente cada unidad mediante números de serie.
+
+**Decisión:** La versión inicial controlará los artículos de inventario mediante cantidades y unidades de medida, sin implementar seguimiento por lotes ni números de serie.
+
+**Motivos:**
+- Mantener un alcance adecuado para el proyecto académico.
+- Simplificar el registro y control de existencias.
+- Utilizar `InventoryMovement` para registrar entradas, salidas y ajustes.
+
+**Consecuencias y riesgos:**
+- No será posible rastrear inicialmente el origen o destino de cada lote.
+- No se podrá identificar individualmente cada unidad de un artículo.
+- El modelo podrá ampliarse posteriormente si las necesidades operativas lo justifican.
