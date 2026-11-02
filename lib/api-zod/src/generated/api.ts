@@ -27,9 +27,6 @@ export const createServiceRequestBodyContactNameMax = 120;
 export const createServiceRequestBodyContactPhoneMin = 5;
 export const createServiceRequestBodyContactPhoneMax = 30;
 
-export const createServiceRequestBodyServiceTypeMin = 2;
-export const createServiceRequestBodyServiceTypeMax = 80;
-
 export const createServiceRequestBodyNotesMax = 1000;
 
 
@@ -37,7 +34,7 @@ export const createServiceRequestBodyNotesMax = 1000;
 export const CreateServiceRequestBody = zod.object({
   "contactName": zod.string().min(createServiceRequestBodyContactNameMin).max(createServiceRequestBodyContactNameMax),
   "contactPhone": zod.string().min(createServiceRequestBodyContactPhoneMin).max(createServiceRequestBodyContactPhoneMax),
-  "serviceType": zod.string().min(createServiceRequestBodyServiceTypeMin).max(createServiceRequestBodyServiceTypeMax),
+  "serviceOfferingId": zod.string().uuid(),
   "requestedDate": zod.coerce.date().optional(),
   "notes": zod.string().max(createServiceRequestBodyNotesMax).optional()
 })
@@ -214,6 +211,98 @@ export const SetEmployeeActiveResponse = zod.object({
   "mustChangePassword": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "lastLoginAt": zod.coerce.date().nullable()
+})
+})
+
+
+/**
+ * Returns active offerings available for public service requests.
+ * @summary List active service offerings
+ */
+export const ListPublicServiceOfferingsResponse = zod.object({
+  "serviceOfferings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Includes active and inactive offerings.
+ * @summary List all service offerings
+ */
+export const ListAdminServiceOfferingsResponse = zod.object({
+  "serviceOfferings": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a service offering
+ */
+export const createServiceOfferingBodyNameMin = 2;
+export const createServiceOfferingBodyNameMax = 120;
+
+export const createServiceOfferingBodyDescriptionMax = 1000;
+
+
+
+export const CreateServiceOfferingBody = zod.object({
+  "name": zod.string().min(createServiceOfferingBodyNameMin).max(createServiceOfferingBodyNameMax),
+  "description": zod.string().max(createServiceOfferingBodyDescriptionMax).nullish()
+})
+
+export const CreateServiceOfferingResponse = zod.object({
+  "serviceOffering": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * Updates its name, description, or active state. Does not delete historical requests.
+ * @summary Update a service offering
+ */
+export const UpdateServiceOfferingParams = zod.object({
+  "serviceOfferingId": zod.coerce.string().uuid()
+})
+
+export const updateServiceOfferingBodyNameMin = 2;
+export const updateServiceOfferingBodyNameMax = 120;
+
+export const updateServiceOfferingBodyDescriptionMax = 1000;
+
+
+
+export const UpdateServiceOfferingBody = zod.object({
+  "name": zod.string().min(updateServiceOfferingBodyNameMin).max(updateServiceOfferingBodyNameMax).optional(),
+  "description": zod.string().max(updateServiceOfferingBodyDescriptionMax).nullish(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateServiceOfferingResponse = zod.object({
+  "serviceOffering": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 })
 

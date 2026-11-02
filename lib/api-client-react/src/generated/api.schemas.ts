@@ -20,11 +20,7 @@ export interface CreateServiceRequest {
      * @maxLength 30
      */
   contactPhone: string;
-  /**
-     * @minLength 2
-     * @maxLength 80
-     */
-  serviceType: string;
+  serviceOfferingId: string;
   requestedDate?: string;
   /** @maxLength 1000 */
   notes?: string;
@@ -149,6 +145,51 @@ export interface EmployeeCreateResult {
 
 export interface EmployeeStatusResponse {
   employee: AdminEmployee;
+}
+
+export interface ServiceOffering {
+  id: string;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceOfferingList {
+  serviceOfferings: ServiceOffering[];
+}
+
+export interface CreateServiceOfferingInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+}
+
+export interface UpdateServiceOfferingInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @maxLength 1000
+     * @nullable
+     */
+  description?: string | null;
+  isActive?: boolean;
+}
+
+export interface ServiceOfferingResponse {
+  serviceOffering: ServiceOffering;
 }
 
 export interface ApiError {

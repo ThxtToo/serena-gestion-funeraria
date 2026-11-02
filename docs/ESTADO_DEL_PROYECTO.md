@@ -1,152 +1,153 @@
-
 # Serena — Estado del proyecto
 
-**Versión del documento:** 0.1  
-**Última actualización:** 2026-10-26  
-**Fase actual:** Planificación y documentación  
-**Estado general:** En preparación  
-**Objetivo inmediato:** Completar y revisar la documentación antes de programar.
+**Versión del documento:** 0.2
+**Última actualización:** 2026-11-01
+**Fase actual:** Consolidación documental y preparación de implementación
+**Estado general:** Infraestructura base implementada; documentación en revisión
+**Objetivo inmediato:** Cerrar la revisión documental y preparar la siguiente fase de desarrollo.
 
-## 1. Descripción breve
+## 1. Descripción del proyecto
 
 Serena es un sistema inteligente de gestión funeraria concebido como proyecto académico, contextualizado para una funeraria en Venezuela.
 
 La primera versión debe ser funcional, demostrable, documentada y desarrollada con datos ficticios. El uso operativo real queda fuera del alcance inicial.
 
-## 2. Fuente oficial
+El sistema busca organizar las solicitudes de servicio, el inventario, la disponibilidad de recursos y la atención inicial al cliente mediante un agente de inteligencia artificial controlado por el backend.
+
+## 2. Fuente oficial y organización del trabajo
 
 El repositorio de GitHub `serena-gestion-funeraria` es la fuente oficial del proyecto.
 
-Antes de iniciar una sesión de trabajo, revisar:
+Antes de iniciar una sesión de trabajo se deben revisar:
 
 1. `README.md`
 2. `AGENTS.md`
 3. `docs/ESTADO_DEL_PROYECTO.md`
 4. El documento de requisitos o diseño relacionado con la tarea.
 
-No asumir que el código existe o funciona si todavía no se ha implementado y verificado.
+No se considerará que una funcionalidad está implementada o verificada únicamente porque aparezca en la documentación.
 
-## 3. Documentación prevista
+Los cambios deben realizarse de manera incremental, con pruebas pertinentes y actualización de la documentación.
 
-- [x] `README.md` — creado en GitHub.
-- [x] `AGENTS.md` — creado en GitHub.
-- [x] `docs/REQUISITOS.md` — creado en GitHub.
-- [x] `docs/ARQUITECTURA.md` — creado en GitHub.
-- [ ] `docs/DECISIONES_TECNICAS.md` — pendiente.
-- [ ] `docs/CONTRATO_DEL_AGENTE.md` — pendiente.
-- [ ] Documento de casos de uso detallados.
-- [ ] Modelo entidad-relación.
-- [ ] Plan de pruebas.
-- [ ] Manual técnico.
-- [ ] Manual de usuario.
-- [ ] Informe y presentación académica.
+## 3. Documentación del proyecto
 
-Las casillas marcadas reflejan los commits confirmados por el responsable del proyecto. No representan una auditoría independiente del contenido.
-
-## 4. Alcance previsto de la primera versión
-
-1. Portal público de información.
-2. Panel privado para personal autorizado.
-3. Registro y consulta de solicitudes.
-4. Gestión de inventario y movimientos.
-5. Gestión y asignación de recursos.
-6. Consulta demostrativa de pólizas ficticias.
-7. Agente de IA con herramientas controladas por el backend.
-8. Atención humana mediante un contacto configurable.
-9. Pruebas y documentación.
-
-## 5. Tecnologías propuestas
-
-- React, TypeScript y Vite para el frontend.
-- Node.js, Express y TypeScript para el backend.
-- PostgreSQL para persistencia.
-- Drizzle ORM para el acceso a datos y las migraciones.
-- Groq para el agente de IA.
-- Vitest y pruebas de API para verificación.
-
-Estas tecnologías son propuestas iniciales y deberán confirmarse antes de iniciar la implementación.
-
-## 6. Restricciones importantes
-
-- Utilizar datos ficticios en desarrollo y demostraciones.
-- No incluir claves API ni credenciales en GitHub.
-- No exponer la clave de Groq al navegador.
-- No permitir que la IA ejecute consultas SQL arbitrarias.
-- Validar en el backend las operaciones sensibles.
-- No tratar una solicitud como una reserva confirmada automáticamente.
-- No declarar una función terminada sin pruebas o verificación apropiada.
-- No afirmar que el sistema está listo para operaciones reales.
-
-## 7. Metodología de trabajo
-
-Se propone utilizar una fase inicial de análisis y diseño, seguida de iteraciones pequeñas de implementación.
-
-Cada tarea debe incluir:
-
-1. Objetivo y criterios de aceptación.
-2. Cambios limitados y comprensibles.
-3. Pruebas pertinentes.
-4. Actualización de documentación.
-5. Commit descriptivo.
-6. Registro de pendientes y siguiente paso.
-
-## 8. Situación actual
-
-La documentación base está en construcción. Todavía no se ha confirmado la existencia de una aplicación funcional ni de una base de datos configurada.
-
-No comenzar la implementación completa hasta revisar los requisitos, las decisiones técnicas, los casos de uso, el modelo de datos y el contrato del agente.
-
-## 9. Próximos pasos
-
-1. Crear `docs/DECISIONES_TECNICAS.md`.
-2. Crear `docs/CONTRATO_DEL_AGENTE.md`.
-3. Detallar los casos de uso.
-4. Diseñar el modelo entidad-relación.
-5. Preparar el plan de pruebas.
-6. Revisar las instrucciones y entregables de la asignatura.
-7. Aprobar el diseño inicial y preparar el entorno de desarrollo.
-
-## 10. Registro de cambios
-
-- 2026-10-26: estado inicial de documentación registrado.
-- Las futuras actualizaciones deben describir cambios verificables y tareas completadas.
-
-
-## 8. Estado de la documentación académica
-
-### 8.1. Documentos preparados
-
-Los siguientes documentos tienen una primera versión documentada en el repositorio:
+Los siguientes documentos cuentan con una primera versión en el repositorio:
 
 - [x] `README.md`: presentación general del proyecto.
 - [x] `AGENTS.md`: instrucciones de trabajo para asistentes de IA.
 - [x] `docs/REQUISITOS.md`: requisitos funcionales y no funcionales.
 - [x] `docs/ARQUITECTURA.md`: arquitectura técnica propuesta.
+- [x] `docs/ESTADO_DEL_PROYECTO.md`: seguimiento del avance.
 - [x] `docs/DECISIONES_TECNICAS.md`: registro de decisiones técnicas.
-- [x] `docs/CONTRATO_DEL_AGENTE.md`: contrato de herramientas del agente de IA.
-- [x] `docs/CASOS_DE_USO.md`: casos de uso principales.
-- [x] `docs/MODELO_DATOS.md`: modelo conceptual de datos.
-- [x] `docs/PLAN_DE_PRUEBAS.md`: plan inicial de pruebas.
-- [x] `docs/METODOLOGIA.md`: metodología de trabajo propuesta.
+- [x] `docs/CONTRATO_DEL_AGENTE.md`: herramientas y restricciones del agente.
+- [x] `docs/CASOS_DE_USO.md`: actores, flujos y criterios de aceptación.
+- [x] `docs/MODELO_DATOS.md`: entidades, relaciones y restricciones.
+- [x] `docs/PLAN_DE_PRUEBAS.md`: estrategia y escenarios de prueba.
+- [x] `docs/METODOLOGIA.md`: metodología de trabajo.
 
-**Nota:** las casillas indican que los documentos fueron preparados y guardados en el repositorio según el registro de trabajo. No significan que todos los requisitos hayan sido validados por la funeraria o el profesor.
+Las casillas indican que existe una primera versión de cada documento. No significan que todos los requisitos estén aprobados o validados por el profesor o por personal funerario.
 
-### 8.2. Validaciones pendientes
+## 4. Estado de implementación
 
-- [ ] Contrastar la metodología con las instrucciones exactas del profesor.
-- [ ] Confirmar los requisitos con la organización, si se dispone de acceso a ella.
-- [ ] Revisar los casos de uso y sus reglas de negocio.
-- [ ] Validar el modelo de datos antes de crear las tablas definitivas.
-- [x] Elegir y documentar el mecanismo de autenticación.
-- [ ] Confirmar la configuración de desarrollo y ejecución.
-- [ ] Definir los criterios de aceptación de la entrega académica.
+### 4.1. Infraestructura y backend
 
-### 8.3. Estado de implementación
+- [x] Estructura base del proyecto.
+- [x] Configuración inicial del entorno de desarrollo.
+- [x] Infraestructura base de frontend y backend.
+- [x] API inicial.
+- [x] Pruebas iniciales de API.
+- [x] Autenticación propia.
+- [x] Gestión de sesiones.
+- [x] Administración de cuentas.
 
-**Estado actual:** autenticación propia, sesiones y administración de cuentas implementadas y verificadas. Los demás módulos principales siguen en planificación y documentación inicial.
+Los elementos marcados como implementados corresponden al estado registrado del proyecto. Su funcionamiento deberá volver a comprobarse cuando se realicen cambios que puedan afectarlos.
 
-La aplicación no debe considerarse completa únicamente porque la autenticación esté implementada. Cada módulo se marcará como completado después de desarrollarlo, ejecutarlo y verificar sus pruebas.
+### 4.2. Módulos funcionales pendientes
 
-### 8.4. Próximo hito
+- [ ] Portal público integrado con el backend.
+- [ ] Registro y seguimiento completo de solicitudes.
+- [ ] Catálogo administrable de servicios funerarios.
+- [ ] Administración de canales de atención.
+- [ ] Gestión completa de usuarios, roles y permisos.
+- [ ] Gestión de recursos y asignaciones.
+- [ ] Gestión de inventario y movimientos.
+- [ ] Verificación de solicitudes mediante códigos temporales.
+- [ ] Consulta demostrativa de pólizas ficticias.
+- [ ] Agente de IA integrado con herramientas controladas por el backend.
+- [ ] Panel privado con las vistas correspondientes a cada rol.
 
-Revisar los documentos existentes y contrastarlos con las instrucciones de la asignatura. Después, preparar la estructura inicial del repositorio de código y configurar el entorno de desarrollo, sin integrar todavía todas las funcionalidades de Serena.
+La documentación de estos módulos no implica que estén implementados.
+
+## 5. Tecnologías del proyecto
+
+- Frontend: React, TypeScript y Vite.
+- Backend: Node.js, Express y TypeScript.
+- Base de datos: PostgreSQL.
+- ORM y migraciones: Drizzle ORM.
+- Inteligencia artificial: API de Groq, utilizada exclusivamente desde el backend.
+- Pruebas: `node:test` con `tsx`.
+- Gestión de paquetes: pnpm workspaces.
+
+La implementación deberá respetar las decisiones técnicas documentadas y sus posibles modificaciones deberán registrarse.
+
+## 6. Restricciones y criterios generales
+
+- Utilizar datos ficticios durante el desarrollo y las demostraciones.
+- No incluir claves API ni credenciales en GitHub.
+- No exponer la clave de Groq al navegador.
+- No permitir que el agente ejecute consultas SQL arbitrarias.
+- El agente no tendrá acceso directo a la base de datos.
+- El backend validará autenticación, permisos, datos y disponibilidad antes de ejecutar operaciones privadas.
+- Los empleados solo podrán realizar operaciones para las que tengan autorización.
+- Una solicitud registrada no se considerará automáticamente confirmada.
+- Las operaciones de inventario y asignación deberán proteger la integridad de los datos ante concurrencia.
+- No declarar una funcionalidad terminada sin pruebas o verificación apropiada.
+- No considerar el sistema preparado para operaciones funerarias reales.
+
+## 7. Validaciones pendientes
+
+- [ ] Contrastar los requisitos con las instrucciones exactas del profesor.
+- [ ] Validar los casos de uso y las reglas de negocio.
+- [ ] Confirmar las reglas operativas con personal funerario, si se dispone de acceso.
+- [ ] Validar el modelo conceptual antes de definir el esquema físico.
+- [ ] Confirmar los tipos, estados y reglas de los recursos.
+- [ ] Validar categorías y unidades del inventario.
+- [ ] Revisar las políticas de privacidad y conservación de datos.
+- [ ] Confirmar los criterios de aceptación de la entrega académica.
+- [ ] Verificar la configuración completa del entorno de desarrollo y ejecución.
+
+La documentación actual constituye una base de diseño académico y conserva decisiones pendientes de validación.
+
+## 8. Próximos hitos
+
+1. Finalizar la revisión y consolidación de la documentación.
+2. Revisar la arquitectura y el modelo de datos frente a los requisitos y casos de uso.
+3. Cerrar y ampliar las pruebas automatizadas de la API.
+4. Definir y preparar el esquema físico de PostgreSQL y sus migraciones.
+5. Completar la autorización de operaciones según los roles y permisos.
+6. Implementar progresivamente los módulos de solicitudes, recursos e inventario.
+7. Integrar el portal público y el panel privado.
+8. Incorporar el agente de IA y sus herramientas controladas por el backend.
+9. Ejecutar pruebas de integración, seguridad y aceptación.
+10. Preparar los manuales, evidencias y entregables académicos.
+
+Cada hito deberá considerarse completado únicamente cuando sus criterios de aceptación se hayan verificado.
+
+## 9. Metodología de trabajo
+
+Cada tarea deberá incluir:
+
+1. Objetivo y criterios de aceptación.
+2. Cambios limitados y comprensibles.
+3. Pruebas pertinentes.
+4. Actualización de documentación.
+5. Verificación del estado del repositorio.
+6. Commit descriptivo cuando el responsable lo autorice.
+7. Registro de pendientes y siguiente paso.
+
+No se realizarán commits ni publicaciones remotas sin autorización expresa.
+
+## 10. Registro de cambios
+
+- 2026-10-26: registro inicial del estado de documentación e implementación.
+- 2026-11-01: consolidación del estado del proyecto, actualización de los documentos preparados y reorganización de los hitos pendientes.

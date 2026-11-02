@@ -30,6 +30,7 @@ import type {
   AuthenticatedUser,
   ChangePasswordInput,
   CreateEmployeeInput,
+  CreateServiceOfferingInput,
   CreateServiceRequest,
   EmployeeCreateResult,
   EmployeeList,
@@ -37,9 +38,12 @@ import type {
   HealthStatus,
   LoginInput,
   LogoutResult,
+  ServiceOfferingList,
+  ServiceOfferingResponse,
   ServiceRequestCreated,
   ServiceRequestStatus,
-  SetEmployeeActiveInput
+  SetEmployeeActiveInput,
+  UpdateServiceOfferingInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -989,5 +993,387 @@ export const useSetEmployeeActive = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getSetEmployeeActiveMutationOptions(options), queryClient);
+    }
+
+export const getListPublicServiceOfferingsUrl = () => {
+
+
+
+
+  return `/api/service-offerings`
+}
+
+/**
+ * Returns active offerings available for public service requests.
+ * @summary List active service offerings
+ */
+export const listPublicServiceOfferings = async ( options?: Parameters<typeof customFetch>[1]): Promise<ServiceOfferingList> => {
+
+  return customFetch<ServiceOfferingList>(getListPublicServiceOfferingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPublicServiceOfferingsQueryKey = () => {
+    return [
+    `/api/service-offerings`
+    ] as const;
+    }
+
+
+export const getListPublicServiceOfferingsQueryOptions = <TData = Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPublicServiceOfferingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicServiceOfferings>>> = ({ signal }) => listPublicServiceOfferings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPublicServiceOfferingsQueryResult = NonNullable<Awaited<ReturnType<typeof listPublicServiceOfferings>>>
+export type ListPublicServiceOfferingsQueryError = ErrorType<ApiError>
+
+
+export function useListPublicServiceOfferings<TData = Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublicServiceOfferings>>,
+          TError,
+          Awaited<ReturnType<typeof listPublicServiceOfferings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublicServiceOfferings<TData = Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublicServiceOfferings>>,
+          TError,
+          Awaited<ReturnType<typeof listPublicServiceOfferings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublicServiceOfferings<TData = Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List active service offerings
+ */
+
+export function useListPublicServiceOfferings<TData = Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPublicServiceOfferingsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminServiceOfferingsUrl = () => {
+
+
+
+
+  return `/api/admin/service-offerings`
+}
+
+/**
+ * Includes active and inactive offerings.
+ * @summary List all service offerings
+ */
+export const listAdminServiceOfferings = async ( options?: Parameters<typeof customFetch>[1]): Promise<ServiceOfferingList> => {
+
+  return customFetch<ServiceOfferingList>(getListAdminServiceOfferingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminServiceOfferingsQueryKey = () => {
+    return [
+    `/api/admin/service-offerings`
+    ] as const;
+    }
+
+
+export const getListAdminServiceOfferingsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminServiceOfferingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminServiceOfferings>>> = ({ signal }) => listAdminServiceOfferings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminServiceOfferingsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminServiceOfferings>>>
+export type ListAdminServiceOfferingsQueryError = ErrorType<ApiError>
+
+
+export function useListAdminServiceOfferings<TData = Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminServiceOfferings>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminServiceOfferings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminServiceOfferings<TData = Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminServiceOfferings>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminServiceOfferings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminServiceOfferings<TData = Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List all service offerings
+ */
+
+export function useListAdminServiceOfferings<TData = Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceOfferings>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminServiceOfferingsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateServiceOfferingUrl = () => {
+
+
+
+
+  return `/api/admin/service-offerings`
+}
+
+/**
+ * @summary Create a service offering
+ */
+export const createServiceOffering = async (createServiceOfferingInput: CreateServiceOfferingInput, options?: Parameters<typeof customFetch>[1]): Promise<ServiceOfferingResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ServiceOfferingResponse>(getCreateServiceOfferingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createServiceOfferingInput)
+  }
+);}
+
+
+
+
+
+export const getCreateServiceOfferingMutationKey = () => ['createServiceOffering'] as const;
+
+export const getCreateServiceOfferingMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createServiceOffering>>, TError,CreateServiceOfferingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createServiceOffering>>, TError,CreateServiceOfferingMutationVariables, TContext> => {
+
+const mutationKey = getCreateServiceOfferingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createServiceOffering>>, CreateServiceOfferingMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createServiceOffering(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateServiceOfferingMutationResult = NonNullable<Awaited<ReturnType<typeof createServiceOffering>>>
+    export type CreateServiceOfferingMutationBody = BodyType<CreateServiceOfferingInput>
+    export type CreateServiceOfferingMutationError = ErrorType<ApiError>
+    export type CreateServiceOfferingMutationVariables = {data: BodyType<CreateServiceOfferingInput>}
+
+    /**
+ * @summary Create a service offering
+ */
+export const useCreateServiceOffering = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createServiceOffering>>, TError,CreateServiceOfferingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createServiceOffering>>,
+        TError,
+        CreateServiceOfferingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateServiceOfferingMutationOptions(options), queryClient);
+    }
+
+export const getUpdateServiceOfferingUrl = (serviceOfferingId: string,) => {
+
+
+
+
+  return `/api/admin/service-offerings/${serviceOfferingId}`
+}
+
+/**
+ * Updates its name, description, or active state. Does not delete historical requests.
+ * @summary Update a service offering
+ */
+export const updateServiceOffering = async (serviceOfferingId: string,
+    updateServiceOfferingInput: UpdateServiceOfferingInput, options?: Parameters<typeof customFetch>[1]): Promise<ServiceOfferingResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ServiceOfferingResponse>(getUpdateServiceOfferingUrl(serviceOfferingId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateServiceOfferingInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateServiceOfferingMutationKey = () => ['updateServiceOffering'] as const;
+
+export const getUpdateServiceOfferingMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateServiceOffering>>, TError,UpdateServiceOfferingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateServiceOffering>>, TError,UpdateServiceOfferingMutationVariables, TContext> => {
+
+const mutationKey = getUpdateServiceOfferingMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateServiceOffering>>, UpdateServiceOfferingMutationVariables> = (props) => {
+          const {serviceOfferingId,data} = props ?? {};
+
+          return  updateServiceOffering(serviceOfferingId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateServiceOfferingMutationResult = NonNullable<Awaited<ReturnType<typeof updateServiceOffering>>>
+    export type UpdateServiceOfferingMutationBody = BodyType<UpdateServiceOfferingInput>
+    export type UpdateServiceOfferingMutationError = ErrorType<ApiError>
+    export type UpdateServiceOfferingMutationVariables = {serviceOfferingId: string;data: BodyType<UpdateServiceOfferingInput>}
+
+    /**
+ * @summary Update a service offering
+ */
+export const useUpdateServiceOffering = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateServiceOffering>>, TError,UpdateServiceOfferingMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateServiceOffering>>,
+        TError,
+        UpdateServiceOfferingMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateServiceOfferingMutationOptions(options), queryClient);
     }
 

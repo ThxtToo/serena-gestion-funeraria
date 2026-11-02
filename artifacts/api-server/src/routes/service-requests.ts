@@ -7,7 +7,11 @@ import {
   GetServiceRequestParams,
   GetServiceRequestResponse,
 } from "@workspace/api-zod";
-import { db, serviceRequestsTable } from "@workspace/db";
+import {
+  db,
+  serviceOfferingsTable,
+  serviceRequestsTable,
+} from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -29,25 +33,53 @@ router.post("/service-requests", async (req, res) => {
   }
 
   try {
-    const [created] = await db
-      .insert(serviceRequestsTable)
-      .values({
-        referenceCode: generateReferenceCode(),
-        contactName: parsed.data.contactName,
-        contactPhone: parsed.data.contactPhone,
-        serviceType: parsed.data.serviceType,
-        requestedDate: parsed.data.requestedDate,
-        notes: parsed.data.notes,
-        status: "pendiente",
-      })
-      .returning({
-        referenceCode: serviceRequestsTable.referenceCode,
-        status: serviceRequestsTable.status,
-      });
+    const result = await db.transaction(async (tx) => {
+      const [offering] = await tx
+        .select()
+        .from(serviceOfferingsTable)
+        .where(eq(serviceOfferingsTable.id, parsed.data.serviceOfferingId))
+        .limit(1)
+        .for("share");
+
+      if (!offering || !offering.isActive) {
+        return { unavailable: true as const };
+      }
+
+      const [created] = await tx
+        .insert(serviceRequestsTable)
+        .values({
+          referenceCode: generateReferenceCode(),
+          contactName: parsed.data.contactName.trim(),
+          contactPhone: parsed.data.contactPhone.trim(),
+          serviceOfferingId: offering.id,
+          serviceType: offering.name,
+          requestedDate: parsed.data.requestedDate,
+          notes: parsed.data.notes?.trim() || null,
+          status: "pendiente",
+        })
+        .returning({
+          referenceCode: serviceRequestsTable.referenceCode,
+          status: serviceRequestsTable.status,
+        });
+
+      return {
+        unavailable: false as const,
+        created,
+      };
+    });
+
+    if (result.unavailable) {
+      const error: ApiError = {
+        error: "El servicio seleccionado no está disponible.",
+      };
+
+      res.status(400).json(error);
+      return;
+    }
 
     const response = CreateServiceRequestResponse.parse({
-      referenceCode: created.referenceCode,
-      status: created.status,
+      referenceCode: result.created.referenceCode,
+      status: result.created.status,
       message:
         "Solicitud recibida para revisión. El servicio aún no está confirmado.",
     });
@@ -119,4 +151,5 @@ router.get("/service-requests/:referenceCode", async (req, res) => {
     res.status(500).json(response);
   }
 });
+
 export default router;

@@ -17,11 +17,7 @@ export interface CreateServiceRequest {
      * @maxLength 30
      */
   contactPhone: string;
-  /**
-     * @minLength 2
-     * @maxLength 80
-     */
-  serviceType: string;
+  serviceOfferingId: string;
   requestedDate?: Date;
   /** @maxLength 1000 */
   notes?: string;

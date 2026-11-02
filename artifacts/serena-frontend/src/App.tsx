@@ -4,13 +4,20 @@ import { Link, Redirect, Route, Switch, useLocation } from "wouter";
 import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
+  BookOpen, Plus, Pencil, Power, Send, CalendarDays,
 } from "lucide-react";
 import {
-  getGetAuthSessionQueryKey, getListEmployeesQueryKey, useChangePassword,
-  useCreateEmployee, useGetAuthSession, useListEmployees, useLogin, useLogout,
-  useSetEmployeeActive,
+  getGetAuthSessionQueryKey, getListEmployeesQueryKey,
+  getListAdminServiceOfferingsQueryKey, getListPublicServiceOfferingsQueryKey,
+  useChangePassword, useCreateEmployee, useGetAuthSession, useListEmployees,
+  useLogin, useLogout, useSetEmployeeActive, useListPublicServiceOfferings,
+  useListAdminServiceOfferings, useCreateServiceOffering, useUpdateServiceOffering,
+  useCreateServiceRequest,
 } from "@workspace/api-client-react";
-import type { AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult } from "@workspace/api-client-react";
+import type {
+  AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
+  ServiceOffering, ServiceRequestCreated,
+} from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -202,7 +209,10 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
       <nav aria-label="Navegación del espacio">
         <div className="nav-label">Espacio de trabajo</div>
         <Link href="/app" className={`side-link ${location === "/app" ? "active" : ""}`} data-testid="link-workspace-home"><UserRound size={16} /><span>Inicio</span></Link>
-        {isAdmin && <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>}
+        {isAdmin && <>
+          <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
+          <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
+        </>}
       </nav>
       <div className="sidebar-bottom">
         <div className="user-mini">
@@ -351,6 +361,295 @@ function AdminUsers({ session }: { session: AuthenticatedSession }) {
   </WorkspaceShell>;
 }
 
+
+
+function PublicServiceRequest() {
+  const offeringsQuery = useListPublicServiceOfferings();
+  const createRequest = useCreateServiceRequest();
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [serviceOfferingId, setServiceOfferingId] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [result, setResult] = useState<ServiceRequestCreated | null>(null);
+  const [error, setError] = useState("");
+
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (!serviceOfferingId) {
+      setError("Selecciona el servicio que deseas solicitar.");
+      return;
+    }
+
+    createRequest.mutate({
+      data: {
+        contactName: contactName.trim(),
+        contactPhone: contactPhone.trim(),
+        serviceOfferingId,
+        ...(requestedDate ? { requestedDate } : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+      },
+    }, {
+      onSuccess: (response) => setResult(response),
+      onError: (requestError) => setError(getErrorMessage(
+        requestError,
+        "No pudimos registrar tu solicitud. Comprueba los datos e inténtalo de nuevo.",
+      )),
+    });
+  };
+
+  return <div className="auth-layout public-request-layout">
+    <AuthAside />
+    <main className="auth-main public-request-main">
+      <section className="auth-card public-request-card">
+        <Brand />
+        {result ? <>
+          <span className="state-symbol"><CheckCircle2 size={18} /></span>
+          <p className="page-kicker">SOLICITUD REGISTRADA</p>
+          <h1 className="page-title">Gracias por contactar a Serena.</h1>
+          <div className="success-banner" role="status">
+            <CheckCircle2 size={18} />
+            <span>{result.message}</span>
+          </div>
+          <div className="request-reference">
+            <span>REFERENCIA DE SOLICITUD</span>
+            <strong>{result.referenceCode}</strong>
+            <small>Estado: pendiente de revisión</small>
+          </div>
+          <p className="auth-intro">El equipo revisará la información y se pondrá en contacto contigo. Esta solicitud no representa una confirmación de disponibilidad ni del servicio.</p>
+          <button className="primary-btn" type="button" onClick={() => {
+            setResult(null);
+            setContactName("");
+            setContactPhone("");
+            setServiceOfferingId("");
+            setRequestedDate("");
+            setNotes("");
+          }}>Registrar otra solicitud <ArrowRight size={15} /></button>
+        </> : <>
+          <p className="page-kicker">ATENCIÓN Y ACOMPAÑAMIENTO</p>
+          <h1 className="page-title">Estamos aquí para ayudarte.</h1>
+          <p className="auth-intro">Comparte tus datos y el servicio que necesitas. Nuestro equipo revisará tu solicitud y se comunicará contigo.</p>
+
+          {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+          {offeringsQuery.isLoading ? <div className="loading-state">Cargando servicios disponibles…</div>
+          : offeringsQuery.isError ? <div className="error-state">
+              <strong>No pudimos cargar los servicios.</strong>
+              <p>Comprueba tu conexión e inténtalo de nuevo.</p>
+              <button className="quiet-btn" type="button" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+            </div>
+          : offerings.length === 0 ? <div className="empty-state">
+              <strong>Catálogo temporalmente no disponible</strong>
+              <p>En este momento no hay servicios publicados para solicitar.</p>
+            </div>
+          : <form onSubmit={submit}>
+              <div className="field">
+                <label htmlFor="request-contact-name">Nombre completo</label>
+                <input id="request-contact-name" required minLength={2} maxLength={120}
+                  autoComplete="name" value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                  placeholder="Nombre y apellidos" />
+              </div>
+              <div className="field">
+                <label htmlFor="request-contact-phone">Teléfono de contacto</label>
+                <input id="request-contact-phone" required minLength={5} maxLength={30}
+                  type="tel" autoComplete="tel" value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  placeholder="Número de teléfono" />
+              </div>
+              <div className="field">
+                <label htmlFor="request-offering">Servicio que necesitas</label>
+                <select id="request-offering" required value={serviceOfferingId}
+                  onChange={(event) => setServiceOfferingId(event.target.value)}>
+                  <option value="">Selecciona un servicio</option>
+                  {offerings.map((offering) => <option key={offering.id} value={offering.id}>{offering.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="request-date">Fecha de preferencia (opcional)</label>
+                <input id="request-date" type="date" value={requestedDate}
+                  onChange={(event) => setRequestedDate(event.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="request-notes">Información adicional (opcional)</label>
+                <textarea id="request-notes" maxLength={1000} rows={4}
+                  value={notes} onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Cuéntanos brevemente cómo podemos ayudarte." />
+              </div>
+              <div className="form-note"><ShieldCheck size={15} /><span>Tu solicitud será revisada por nuestro equipo. El envío no confirma la disponibilidad del servicio.</span></div>
+              <button className="primary-btn" type="submit" disabled={createRequest.isPending}>
+                {createRequest.isPending ? "Enviando solicitud…" : <>Enviar solicitud <Send size={15} /></>}
+              </button>
+            </form>}
+          <div className="public-request-footer"><Link href="/">Acceso para personal Serena</Link></div>
+        </>}
+      </section>
+    </main>
+  </div>;
+}
+
+function ServiceOfferingForm({
+  offering, onClose, onSaved,
+}: {
+  offering?: ServiceOffering;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const createOffering = useCreateServiceOffering();
+  const updateOffering = useUpdateServiceOffering();
+  const [name, setName] = useState(offering?.name ?? "");
+  const [description, setDescription] = useState(offering?.description ?? "");
+  const [error, setError] = useState("");
+  const pending = createOffering.isPending || updateOffering.isPending;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    const data = { name: name.trim(), description: description.trim() || null };
+    const callbacks = {
+      onSuccess: () => onSaved(),
+      onError: (requestError: unknown) => setError(getErrorMessage(
+        requestError,
+        "No pudimos guardar el servicio. Comprueba si ya existe otro con ese nombre.",
+      )),
+    };
+    if (offering) {
+      updateOffering.mutate({ serviceOfferingId: offering.id, data }, callbacks);
+    } else {
+      createOffering.mutate({ data }, callbacks);
+    }
+  };
+
+  return <div className="modal-backdrop" role="presentation"
+    onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="offering-form-title">
+      <div className="modal-head">
+        <div><h2 id="offering-form-title">{offering ? "Editar servicio" : "Nuevo servicio"}</h2>
+          <p>Los servicios activos estarán disponibles en el formulario público.</p></div>
+        <button className="icon-button" type="button" aria-label="Cerrar" onClick={onClose}>×</button>
+      </div>
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="field">
+          <label htmlFor="offering-name">Nombre del servicio</label>
+          <input id="offering-name" required minLength={2} maxLength={120}
+            value={name} onChange={(event) => setName(event.target.value)}
+            placeholder="Nombre del servicio" />
+        </div>
+        <div className="field">
+          <label htmlFor="offering-description">Descripción (opcional)</label>
+          <textarea id="offering-description" rows={4} maxLength={1000}
+            value={description} onChange={(event) => setDescription(event.target.value)}
+            placeholder="Describe brevemente el servicio." />
+        </div>
+        <div className="modal-actions">
+          <button className="quiet-btn" type="button" onClick={onClose} disabled={pending}>Cancelar</button>
+          <button className="secondary-btn" type="submit" disabled={pending}>
+            {pending ? "Guardando…" : <><Check size={15} /> Guardar servicio</>}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>;
+}
+
+function AdminServiceOfferings({ session }: { session: AuthenticatedSession }) {
+  const offeringsQuery = useListAdminServiceOfferings();
+  const updateOffering = useUpdateServiceOffering();
+  const client = useQueryClient();
+  const [editing, setEditing] = useState<ServiceOffering | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const refreshCatalog = () => {
+    client.invalidateQueries({ queryKey: getListAdminServiceOfferingsQueryKey() });
+    client.invalidateQueries({ queryKey: getListPublicServiceOfferingsQueryKey() });
+    setCreating(false);
+    setEditing(null);
+    setNotice("El catálogo se actualizó correctamente.");
+    setError("");
+  };
+
+  const toggleActive = (offering: ServiceOffering) => {
+    setError("");
+    setNotice("");
+    updateOffering.mutate({
+      serviceOfferingId: offering.id,
+      data: { isActive: !offering.isActive },
+    }, {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListAdminServiceOfferingsQueryKey() });
+        client.invalidateQueries({ queryKey: getListPublicServiceOfferingsQueryKey() });
+        setNotice(offering.isActive
+          ? "El servicio se desactivó. Se conservarán las solicitudes históricas."
+          : "El servicio volvió a estar disponible en el formulario público.");
+      },
+      onError: (requestError) => setError(getErrorMessage(
+        requestError, "No pudimos cambiar el estado del servicio.",
+      )),
+    });
+  };
+
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ADMINISTRACIÓN</p>
+      <h1 className="page-title">Catálogo de servicios.</h1>
+      <p className="page-subtitle">Administra los servicios que las personas pueden seleccionar al enviar una solicitud. Desactivar un servicio no elimina su historial.</p>
+
+      <div className="admin-actions">
+        <span className="catalog-count">{offerings.length} {offerings.length === 1 ? "servicio registrado" : "servicios registrados"}</span>
+        <button className="secondary-btn" type="button" onClick={() => { setCreating(true); setNotice(""); }}>
+          <Plus size={15} /> Nuevo servicio
+        </button>
+      </div>
+
+      {notice && <div className="success-banner" role="status"><CheckCircle2 size={17} /><span>{notice}</span></div>}
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+      {offeringsQuery.isLoading ? <div className="loading-state">Cargando catálogo…</div>
+      : offeringsQuery.isError ? <div className="error-state">
+          <strong>No pudimos cargar el catálogo.</strong>
+          <p>Comprueba tu sesión y vuelve a intentarlo.</p>
+          <button className="quiet-btn" type="button" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+        </div>
+      : offerings.length === 0 ? <div className="empty-state">
+          <strong>Aún no hay servicios</strong>
+          <p>Crea el primer servicio para publicarlo en el formulario de solicitudes.</p>
+        </div>
+      : <div className="table-wrap">
+          <table className="employee-table">
+            <thead><tr><th>Servicio</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>{offerings.map((offering) => <tr key={offering.id}>
+              <td><strong>{offering.name}</strong></td>
+              <td>{offering.description || "—"}</td>
+              <td><span className={`pill ${offering.isActive ? "active" : "inactive"}`}>{offering.isActive ? "Activo" : "Inactivo"}</span></td>
+              <td><div className="catalog-row-actions">
+                <button className="quiet-btn" type="button" onClick={() => { setEditing(offering); setNotice(""); }} aria-label={`Editar ${offering.name}`}><Pencil size={14} /> Editar</button>
+                <button className="quiet-btn" type="button" disabled={updateOffering.isPending}
+                  onClick={() => toggleActive(offering)} aria-label={`${offering.isActive ? "Desactivar" : "Activar"} ${offering.name}`}>
+                  <Power size={14} /> {offering.isActive ? "Desactivar" : "Activar"}
+                </button>
+              </div></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+
+      <div className="catalog-public-link"><span>Formulario público de solicitudes</span><Link href="/solicitar-servicio">Ver formulario <ArrowRight size={14} /></Link></div>
+    </section>
+    {(creating || editing) && <ServiceOfferingForm
+      offering={editing ?? undefined}
+      onClose={() => { setCreating(false); setEditing(null); }}
+      onSaved={refreshCatalog}
+    />}
+  </WorkspaceShell>;
+}
+
 function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
@@ -362,7 +661,9 @@ function ProtectedRoute({ session, children, adminOnly = false }: { session: Aut
 }
 
 function AppRoutes() {
+  const [location] = useLocation();
   const sessionQuery = useGetAuthSession({ query: { queryKey: getGetAuthSessionQueryKey(), retry: false } });
+  if (location === "/solicitar-servicio") return <PublicServiceRequest />;
   const unauthorized = isUnauthorized(sessionQuery.error);
   const session = unauthorized ? undefined : sessionQuery.data;
   if (sessionQuery.isLoading) return <AuthLoading />;
@@ -377,6 +678,7 @@ function AppRoutes() {
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />
   </Switch>;
 }

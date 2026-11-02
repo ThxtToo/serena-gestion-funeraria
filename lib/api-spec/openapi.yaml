@@ -9,6 +9,8 @@ servers:
   - url: /api
     description: Base API path
 tags:
+  - name: service-offerings
+    description: Funeral service offering catalog
   - name: health
     description: Health operations
   - name: service-requests
@@ -78,7 +80,7 @@ paths:
           schema:
             type: string
             pattern: '^SER-[A-Fa-f0-9]{10}$'
-            
+
       responses:
         "200":
           description: Request found
@@ -347,6 +349,157 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /service-offerings:
+    get:
+      operationId: listPublicServiceOfferings
+      tags: [service-offerings]
+      summary: List active service offerings
+      description: Returns active offerings available for public service requests.
+      responses:
+        "200":
+          description: Active service offerings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceOfferingList"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-offerings:
+    get:
+      operationId: listAdminServiceOfferings
+      tags: [service-offerings]
+      summary: List all service offerings
+      description: Includes active and inactive offerings.
+      security:
+        - SerenaSession: []
+      responses:
+        "200":
+          description: All service offerings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceOfferingList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+    post:
+      operationId: createServiceOffering
+      tags: [service-offerings]
+      summary: Create a service offering
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceOfferingInput"
+      responses:
+        "201":
+          description: Service offering created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceOfferingResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required or cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: An offering with that name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-offerings/{serviceOfferingId}:
+    patch:
+      operationId: updateServiceOffering
+      tags: [service-offerings]
+      summary: Update a service offering
+      description: Updates its name, description, or active state. Does not delete historical requests.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: serviceOfferingId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceOfferingInput"
+      responses:
+        "200":
+          description: Service offering updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceOfferingResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required or cross-origin request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Service offering not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: An offering with that name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -374,10 +527,9 @@ components:
           type: string
           minLength: 5
           maxLength: 30
-        serviceType:
+        serviceOfferingId:
           type: string
-          minLength: 2
-          maxLength: 80
+          format: uuid
         requestedDate:
           type: string
           format: date-time
@@ -387,7 +539,7 @@ components:
       required:
         - contactName
         - contactPhone
-        - serviceType
+        - serviceOfferingId
 
     ServiceRequestCreated:
       type: object
@@ -572,6 +724,80 @@ components:
         employee:
           $ref: "#/components/schemas/AdminEmployee"
       required: [employee]
+
+    ServiceOffering:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: [string, "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - description
+        - isActive
+        - createdAt
+        - updatedAt
+
+    ServiceOfferingList:
+      type: object
+      properties:
+        serviceOfferings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceOffering"
+      required:
+        - serviceOfferings
+
+    CreateServiceOfferingInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: [string, "null"]
+          maxLength: 1000
+      required:
+        - name
+
+    UpdateServiceOfferingInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: [string, "null"]
+          maxLength: 1000
+        isActive:
+          type: boolean
+
+    ServiceOfferingResponse:
+      type: object
+      properties:
+        serviceOffering:
+          $ref: "#/components/schemas/ServiceOffering"
+      required:
+        - serviceOffering
+
 
     ApiError:
       type: object

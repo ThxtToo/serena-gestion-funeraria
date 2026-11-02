@@ -221,7 +221,7 @@ La recuperación de contraseñas y la auditoría detallada de accesos no forman 
 **Reglas de autorización:**
 
 - El administrador podrá confirmar, rechazar y cancelar solicitudes.
-- Los empleados autorizados también podrán confirmar, rechazar y cancelar solicitudes.
+- Los empleados solo podrán confirmar, rechazar o cancelar solicitudes cuando tengan el permiso específico correspondiente, validado por el backend.
 - Los empleados sin autorización no podrán modificar el estado.
 - La confirmación y el rechazo requieren que la solicitud haya pasado por `en_revision`.
 - Una solicitud nueva comenzará en estado `pendiente`.
@@ -284,6 +284,8 @@ Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los da
 - Permitir que los usuarios autorizados modifiquen o eliminen registros.
 
 **Decisión:** Los registros de auditoría se conservarán sin eliminación automática durante la vida útil del sistema. Su consulta estará restringida al administrador y no podrán modificarse ni eliminarse mediante las operaciones normales del sistema.
+Esta política corresponde a la versión académica. Los períodos de conservación, eliminación y acceso deberán revisarse antes de utilizar el sistema con datos reales.
+
 
 **Datos que se registrarán:**
 - Usuario responsable de la acción.
@@ -336,3 +338,94 @@ Toda decisión técnica nueva que afecte a la arquitectura, la seguridad, los da
 - El registro facilitará la depuración y el seguimiento de las ejecuciones del agente.
 - Será necesario controlar el acceso a estos registros y su volumen.
 - `AgentToolLog` no sustituirá a `AuditEvent`: cada entidad tendrá una finalidad diferenciada.
+
+## DT-020 — Administración de servicios ofrecidos y canales de atención
+
+**Estado:** Aceptada.
+
+**Decisión:** Mantener los servicios ofrecidos y los canales de atención como entidades independientes, administradas exclusivamente por el administrador.
+
+**Reglas acordadas:**
+- Los servicios ofrecidos tendrán un indicador de actividad.
+- Las solicitudes nuevas solo podrán asociarse a servicios activos.
+- Desactivar un servicio no eliminará las solicitudes históricas relacionadas.
+- Los canales de atención también tendrán un indicador de actividad.
+- El portal público y el agente Serena solo consultarán canales activos.
+- Los empleados no podrán modificar servicios ofrecidos ni canales de atención.
+- Si no existen canales activos, el sistema informará que la atención humana no está configurada.
+
+**Consecuencias:**
+- Se mantendrán las entidades `ServiceOffering` y `ContactChannel`.
+- El backend validará el estado de los servicios al crear solicitudes.
+- La interfaz pública no mostrará servicios ni canales desactivados.
+
+## DT-021 — Idempotencia en la creación de solicitudes
+
+**Estado:** Aceptada.
+
+**Problema:** Evitar que los reintentos de una misma operación creen solicitudes duplicadas, especialmente ante errores de comunicación o solicitudes concurrentes.
+
+**Decisión:** Utilizar `IdempotencyRecord` para identificar las operaciones protegidas mediante la combinación de `idempotencyKey` y `operation`.
+
+**Reglas acordadas:**
+- La combinación de clave y operación será única.
+- La misma clave con los mismos datos devolverá el resultado original cuando la operación haya finalizado.
+- La reutilización de una clave con datos diferentes será rechazada.
+- El registro de idempotencia y la creación de la solicitud se coordinarán transaccionalmente.
+- Los registros en procesamiento deberán contemplar reintentos, fallos y solicitudes concurrentes.
+- Si existe una operación con la misma clave y operación que continúa en procesamiento, el backend no iniciará una segunda creación y responderá de forma controlada indicando que la operación sigue en curso.
+- No se almacenarán credenciales ni datos sensibles innecesarios.
+
+**Consecuencias y asuntos pendientes:**
+- Se necesitará una estrategia de recuperación de operaciones interrumpidas.
+- La implementación deberá garantizar que dos solicitudes concurrentes con la misma clave no creen registros duplicados.
+- Se definirán las condiciones de expiración y limpieza de registros.
+
+## DT-022 — Verificación de solicitudes en consultas públicas
+
+**Estado:** Aceptada.
+
+**Problema:** Evitar que una persona pueda consultar información de una solicitud únicamente conociendo su código de referencia.
+
+**Decisión:** Exigir un código temporal de verificación antes de autorizar consultas públicas de solicitudes.
+
+**Reglas acordadas:**
+- El backend generará el código y almacenará únicamente su hash.
+- El código estará asociado a una solicitud concreta.
+- Tendrá una vigencia limitada y un máximo de intentos.
+- Los códigos expirados o utilizados no podrán reutilizarse.
+- La validación, el incremento de intentos fallidos y el marcado de utilización deberán protegerse frente a operaciones concurrentes.
+- Las respuestas públicas no revelarán si una referencia existe cuando la verificación falle.
+- El envío por SMS será simulado en la versión académica.
+- En la versión académica, el código generado solo podrá consultarse mediante un mecanismo controlado de demostración; no se expondrá en registros generales ni en interfaces públicas.
+
+**Consecuencias y asuntos pendientes:**
+- Se utilizará la entidad `RequestVerification`.
+- El backend controlará la generación, validación, expiración y utilización de los códigos.
+- Se deberán probar los límites de intentos, la expiración, la reutilización y las solicitudes concurrentes.
+- El mecanismo de envío real quedará fuera del alcance inicial.
+
+## DT-023 — Integridad ante operaciones concurrentes de inventario y recursos
+
+**Estado:** Aceptada.
+
+**Problema:** Evitar inconsistencias cuando varias operaciones intenten modificar simultáneamente las existencias o asignar un mismo recurso.
+
+**Decisión:** Las operaciones de inventario y asignación de recursos deberán proteger la integridad de los datos frente a solicitudes concurrentes mediante mecanismos transaccionales y de coordinación en PostgreSQL.
+
+**Reglas acordadas para inventario:**
+- La actualización de existencias y el registro de `InventoryMovement` se realizarán en una misma transacción.
+- Las operaciones concurrentes sobre un artículo no deberán producir pérdidas de actualización.
+- `previousQuantity` y `newQuantity` deberán corresponder a las existencias efectivamente registradas.
+- Las salidas no podrán provocar existencias negativas.
+
+**Reglas acordadas para asignaciones:**
+- La disponibilidad se comprobará nuevamente al crear la asignación.
+- No podrán existir asignaciones activas incompatibles para un mismo recurso durante períodos superpuestos.
+- La comprobación de disponibilidad y la creación de la asignación deberán protegerse frente a solicitudes concurrentes.
+- Las asignaciones canceladas conservarán su historial sin bloquear el recurso cuando haya sido liberado.
+
+**Consecuencias y asuntos pendientes:**
+- La implementación deberá seleccionar los mecanismos concretos de bloqueo, aislamiento o restricciones de PostgreSQL adecuados para cada operación.
+- Se realizarán pruebas de concurrencia para inventario y asignaciones.
+- Las garantías de integridad deberán mantenerse aunque las operaciones provengan de distintos usuarios o procesos.
