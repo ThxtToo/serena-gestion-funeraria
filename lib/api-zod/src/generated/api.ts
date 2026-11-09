@@ -65,6 +65,123 @@ export const GetServiceRequestResponse = zod.object({
 
 
 /**
+ * @summary List service requests for administrators
+ */
+export const listAdminServiceRequestsQuerySearchMax = 120;
+
+export const listAdminServiceRequestsQueryPageDefault = 1;
+
+export const listAdminServiceRequestsQueryLimitDefault = 20;
+export const listAdminServiceRequestsQueryLimitMax = 100;
+
+
+
+export const ListAdminServiceRequestsQueryParams = zod.object({
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']).optional(),
+  "search": zod.coerce.string().max(listAdminServiceRequestsQuerySearchMax).optional(),
+  "page": zod.coerce.number().int().min(1).default(listAdminServiceRequestsQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listAdminServiceRequestsQueryLimitMax).default(listAdminServiceRequestsQueryLimitDefault)
+})
+
+export const ListAdminServiceRequestsResponse = zod.object({
+  "serviceRequests": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.union([zod.string().uuid(),zod.null()]).optional(),
+  "requestedDate": zod.union([zod.coerce.date(),zod.null()]).optional(),
+  "notes": zod.union([zod.string(),zod.null()]).optional(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int()
+})
+})
+
+
+/**
+ * @summary Get service request details and status history
+ */
+export const GetAdminServiceRequestParams = zod.object({
+  "requestId": zod.coerce.string().uuid()
+})
+
+export const GetAdminServiceRequestResponse = zod.object({
+  "serviceRequest": zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.union([zod.string().uuid(),zod.null()]).optional(),
+  "requestedDate": zod.union([zod.coerce.date(),zod.null()]).optional(),
+  "notes": zod.union([zod.string(),zod.null()]).optional(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),zod.null()]).optional(),
+  "newStatus": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "changedByUserId": zod.union([zod.string().uuid(),zod.null()]).optional(),
+  "changedByName": zod.union([zod.string(),zod.null()]).optional(),
+  "observation": zod.union([zod.string(),zod.null()]).optional(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Change request status and record an observation
+ */
+export const UpdateAdminServiceRequestStatusParams = zod.object({
+  "requestId": zod.coerce.string().uuid()
+})
+
+export const updateAdminServiceRequestStatusBodyObservationMax = 1000;
+
+
+
+export const UpdateAdminServiceRequestStatusBody = zod.object({
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "observation": zod.string().max(updateAdminServiceRequestStatusBodyObservationMax).optional()
+})
+
+export const UpdateAdminServiceRequestStatusResponse = zod.object({
+  "serviceRequest": zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.union([zod.string().uuid(),zod.null()]).optional(),
+  "requestedDate": zod.union([zod.coerce.date(),zod.null()]).optional(),
+  "notes": zod.union([zod.string(),zod.null()]).optional(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),zod.null()]).optional(),
+  "newStatus": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "changedByUserId": zod.union([zod.string().uuid(),zod.null()]).optional(),
+  "changedByName": zod.union([zod.string(),zod.null()]).optional(),
+  "observation": zod.union([zod.string(),zod.null()]).optional(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Sign in to Serena
  */
 export const loginBodyEmailMax = 254;

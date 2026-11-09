@@ -6,6 +6,7 @@ import {
   db,
   serviceOfferingsTable,
   serviceRequestsTable,
+  serviceRequestStatusHistoryTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import app from "../src/app.ts";
@@ -134,6 +135,23 @@ test("POST crea una solicitud con una oferta activa y GET permite consultarla", 
     assert.equal(found.status, "pendiente");
   } finally {
     if (referenceCode) {
+      const [storedRequest] = await db
+        .select({ id: serviceRequestsTable.id })
+        .from(serviceRequestsTable)
+        .where(eq(serviceRequestsTable.referenceCode, referenceCode))
+        .limit(1);
+
+      if (storedRequest) {
+        await db
+          .delete(serviceRequestStatusHistoryTable)
+          .where(
+            eq(
+              serviceRequestStatusHistoryTable.serviceRequestId,
+              storedRequest.id,
+            ),
+          );
+      }
+
       await db
         .delete(serviceRequestsTable)
         .where(eq(serviceRequestsTable.referenceCode, referenceCode));

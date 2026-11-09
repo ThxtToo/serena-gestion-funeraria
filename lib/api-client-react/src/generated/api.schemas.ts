@@ -49,6 +49,64 @@ export interface ServiceRequestStatus {
   message: string;
 }
 
+export type ServiceRequestStatusValue = typeof ServiceRequestStatusValue[keyof typeof ServiceRequestStatusValue];
+
+
+export const ServiceRequestStatusValue = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface UpdateServiceRequestStatus {
+  status: ServiceRequestStatusValue;
+  /** @maxLength 1000 */
+  observation?: string;
+}
+
+export interface ServiceRequestStatusHistoryEntry {
+  id: string;
+  previousStatus?: ServiceRequestStatusValue | null;
+  newStatus: ServiceRequestStatusValue;
+  changedByUserId?: string | null;
+  changedByName?: string | null;
+  observation?: string | null;
+  createdAt: string;
+}
+
+export interface AdminServiceRequest {
+  id: string;
+  referenceCode: string;
+  contactName: string;
+  contactPhone: string;
+  serviceType: string;
+  serviceOfferingId?: string | null;
+  requestedDate?: string | null;
+  notes?: string | null;
+  status: ServiceRequestStatusValue;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AdminServiceRequestListPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export interface AdminServiceRequestList {
+  serviceRequests: AdminServiceRequest[];
+  pagination: AdminServiceRequestListPagination;
+}
+
+export interface AdminServiceRequestDetail {
+  serviceRequest: AdminServiceRequest;
+  history: ServiceRequestStatusHistoryEntry[];
+}
+
 export type AuthenticatedUserRole = typeof AuthenticatedUserRole[keyof typeof AuthenticatedUserRole];
 
 
@@ -195,4 +253,21 @@ export interface ServiceOfferingResponse {
 export interface ApiError {
   error: string;
 }
+
+export type ListAdminServiceRequestsParams = {
+status?: ServiceRequestStatusValue;
+/**
+ * @maxLength 120
+ */
+search?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
 

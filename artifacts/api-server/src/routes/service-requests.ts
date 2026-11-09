@@ -11,6 +11,7 @@ import {
   db,
   serviceOfferingsTable,
   serviceRequestsTable,
+  serviceRequestStatusHistoryTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -58,9 +59,18 @@ router.post("/service-requests", async (req, res) => {
           status: "pendiente",
         })
         .returning({
+          id: serviceRequestsTable.id,
           referenceCode: serviceRequestsTable.referenceCode,
           status: serviceRequestsTable.status,
         });
+
+      await tx.insert(serviceRequestStatusHistoryTable).values({
+        serviceRequestId: created.id,
+        previousStatus: null,
+        newStatus: "pendiente",
+        changedByUserId: null,
+        observation: "Solicitud recibida mediante el formulario público.",
+      });
 
       return {
         unavailable: false as const,

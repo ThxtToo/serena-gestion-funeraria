@@ -8,6 +8,10 @@
 
 export * from './adminEmployee';
 export * from './adminEmployeeRole';
+export * from './adminServiceRequest';
+export * from './adminServiceRequestDetail';
+export * from './adminServiceRequestList';
+export * from './adminServiceRequestListPagination';
 export * from './apiError';
 export * from './authenticatedSession';
 export * from './authenticatedUser';
@@ -20,6 +24,7 @@ export * from './employeeCreateResult';
 export * from './employeeList';
 export * from './employeeStatusResponse';
 export * from './healthStatus';
+export * from './listAdminServiceRequestsParams';
 export * from './loginInput';
 export * from './logoutResult';
 export * from './serviceOffering';
@@ -27,6 +32,9 @@ export * from './serviceOfferingList';
 export * from './serviceOfferingResponse';
 export * from './serviceRequestCreated';
 export * from './serviceRequestStatus';
+export * from './serviceRequestStatusHistoryEntry';
 export * from './serviceRequestStatusStatus';
+export * from './serviceRequestStatusValue';
 export * from './setEmployeeActiveInput';
 export * from './updateServiceOfferingInput';
+export * from './updateServiceRequestStatus';

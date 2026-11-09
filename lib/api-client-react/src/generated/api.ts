@@ -25,6 +25,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminServiceRequestDetail,
+  AdminServiceRequestList,
   ApiError,
   AuthenticatedSession,
   AuthenticatedUser,
@@ -36,6 +38,7 @@ import type {
   EmployeeList,
   EmployeeStatusResponse,
   HealthStatus,
+  ListAdminServiceRequestsParams,
   LoginInput,
   LogoutResult,
   ServiceOfferingList,
@@ -43,7 +46,8 @@ import type {
   ServiceRequestCreated,
   ServiceRequestStatus,
   SetEmployeeActiveInput,
-  UpdateServiceOfferingInput
+  UpdateServiceOfferingInput,
+  UpdateServiceRequestStatus
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -365,6 +369,304 @@ export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServic
 
 
 
+
+export const getListAdminServiceRequestsUrl = (params?: ListAdminServiceRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/service-requests?${stringifiedParams}` : `/api/admin/service-requests`
+}
+
+/**
+ * @summary List service requests for administrators
+ */
+export const listAdminServiceRequests = async (params?: ListAdminServiceRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminServiceRequestList> => {
+
+  return customFetch<AdminServiceRequestList>(getListAdminServiceRequestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminServiceRequestsQueryKey = (params?: ListAdminServiceRequestsParams,) => {
+    return [
+    `/api/admin/service-requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminServiceRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminServiceRequests>>, TError = ErrorType<ApiError>>(params?: ListAdminServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminServiceRequestsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminServiceRequests>>> = ({ signal }) => listAdminServiceRequests(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminServiceRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminServiceRequests>>>
+export type ListAdminServiceRequestsQueryError = ErrorType<ApiError>
+
+
+export function useListAdminServiceRequests<TData = Awaited<ReturnType<typeof listAdminServiceRequests>>, TError = ErrorType<ApiError>>(
+ params: undefined |  ListAdminServiceRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminServiceRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminServiceRequests<TData = Awaited<ReturnType<typeof listAdminServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminServiceRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminServiceRequests<TData = Awaited<ReturnType<typeof listAdminServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List service requests for administrators
+ */
+
+export function useListAdminServiceRequests<TData = Awaited<ReturnType<typeof listAdminServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminServiceRequestsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminServiceRequestUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${requestId}`
+}
+
+/**
+ * @summary Get service request details and status history
+ */
+export const getAdminServiceRequest = async (requestId: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminServiceRequestDetail> => {
+
+  return customFetch<AdminServiceRequestDetail>(getGetAdminServiceRequestUrl(requestId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminServiceRequestQueryKey = (requestId: string,) => {
+    return [
+    `/api/admin/service-requests/${requestId}`
+    ] as const;
+    }
+
+
+export const getGetAdminServiceRequestQueryOptions = <TData = Awaited<ReturnType<typeof getAdminServiceRequest>>, TError = ErrorType<ApiError>>(requestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminServiceRequestQueryKey(requestId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminServiceRequest>>> = ({ signal }) => getAdminServiceRequest(requestId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: requestId !== null && requestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAdminServiceRequestQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminServiceRequest>>>
+export type GetAdminServiceRequestQueryError = ErrorType<ApiError>
+
+
+export function useGetAdminServiceRequest<TData = Awaited<ReturnType<typeof getAdminServiceRequest>>, TError = ErrorType<ApiError>>(
+ requestId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminServiceRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminServiceRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminServiceRequest<TData = Awaited<ReturnType<typeof getAdminServiceRequest>>, TError = ErrorType<ApiError>>(
+ requestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminServiceRequest>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminServiceRequest>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminServiceRequest<TData = Awaited<ReturnType<typeof getAdminServiceRequest>>, TError = ErrorType<ApiError>>(
+ requestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get service request details and status history
+ */
+
+export function useGetAdminServiceRequest<TData = Awaited<ReturnType<typeof getAdminServiceRequest>>, TError = ErrorType<ApiError>>(
+ requestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminServiceRequest>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAdminServiceRequestQueryOptions(requestId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminServiceRequestStatusUrl = (requestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${requestId}/status`
+}
+
+/**
+ * @summary Change request status and record an observation
+ */
+export const updateAdminServiceRequestStatus = async (requestId: string,
+    updateServiceRequestStatus: UpdateServiceRequestStatus, options?: Parameters<typeof customFetch>[1]): Promise<AdminServiceRequestDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminServiceRequestDetail>(getUpdateAdminServiceRequestStatusUrl(requestId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateServiceRequestStatus)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminServiceRequestStatusMutationKey = () => ['updateAdminServiceRequestStatus'] as const;
+
+export const getUpdateAdminServiceRequestStatusMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>, TError,UpdateAdminServiceRequestStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>, TError,UpdateAdminServiceRequestStatusMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminServiceRequestStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>, UpdateAdminServiceRequestStatusMutationVariables> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  updateAdminServiceRequestStatus(requestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminServiceRequestStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>>
+    export type UpdateAdminServiceRequestStatusMutationBody = BodyType<UpdateServiceRequestStatus>
+    export type UpdateAdminServiceRequestStatusMutationError = ErrorType<ApiError>
+    export type UpdateAdminServiceRequestStatusMutationVariables = {requestId: string;data: BodyType<UpdateServiceRequestStatus>}
+
+    /**
+ * @summary Change request status and record an observation
+ */
+export const useUpdateAdminServiceRequestStatus = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>, TError,UpdateAdminServiceRequestStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminServiceRequestStatus>>,
+        TError,
+        UpdateAdminServiceRequestStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminServiceRequestStatusMutationOptions(options), queryClient);
+    }
 
 export const getLoginUrl = () => {
 

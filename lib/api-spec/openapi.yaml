@@ -15,6 +15,8 @@ tags:
     description: Health operations
   - name: service-requests
     description: Funeral service requests
+  - name: service-request-administration
+    description: Administrator-only service request management
   - name: authentication
     description: Serena staff authentication and session management
   - name: employee-administration
@@ -102,6 +104,136 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests:
+    get:
+      operationId: listAdminServiceRequests
+      tags: [service-request-administration]
+      summary: List service requests for administrators
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ServiceRequestStatusValue"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated service request list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminServiceRequestList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests/{requestId}:
+    get:
+      operationId: getAdminServiceRequest
+      tags: [service-request-administration]
+      summary: Get service request details and status history
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service request details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminServiceRequestDetail"
+        "400":
+          description: Invalid request ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests/{requestId}/status:
+    patch:
+      operationId: updateAdminServiceRequestStatus
+      tags: [service-request-administration]
+      summary: Change request status and record an observation
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceRequestStatus"
+      responses:
+        "200":
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminServiceRequestDetail"
+        "400":
+          description: Invalid status transition or request data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Request status changed concurrently
           content:
             application/json:
               schema:
@@ -575,6 +707,129 @@ components:
         - referenceCode
         - status
         - message
+
+    ServiceRequestStatusValue:
+      type: string
+      enum: [pendiente, en_revision, confirmada, rechazada, cancelada]
+
+    UpdateServiceRequestStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/ServiceRequestStatusValue"
+        observation:
+          type: string
+          maxLength: 1000
+      required: [status]
+
+    ServiceRequestStatusHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          oneOf:
+            - $ref: "#/components/schemas/ServiceRequestStatusValue"
+            - type: "null"
+        newStatus:
+          $ref: "#/components/schemas/ServiceRequestStatusValue"
+        changedByUserId:
+          oneOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        changedByName:
+          oneOf:
+            - type: string
+            - type: "null"
+        observation:
+          oneOf:
+            - type: string
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, newStatus, createdAt]
+
+    AdminServiceRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        referenceCode:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        serviceType:
+          type: string
+        serviceOfferingId:
+          oneOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        requestedDate:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        notes:
+          oneOf:
+            - type: string
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/ServiceRequestStatusValue"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - referenceCode
+        - contactName
+        - contactPhone
+        - serviceType
+        - status
+        - createdAt
+        - updatedAt
+
+    AdminServiceRequestList:
+      type: object
+      properties:
+        serviceRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminServiceRequest"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required: [page, limit, total, totalPages]
+      required: [serviceRequests, pagination]
+
+    AdminServiceRequestDetail:
+      type: object
+      properties:
+        serviceRequest:
+          $ref: "#/components/schemas/AdminServiceRequest"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRequestStatusHistoryEntry"
+      required: [serviceRequest, history]
 
     AuthenticatedUser:
       type: object

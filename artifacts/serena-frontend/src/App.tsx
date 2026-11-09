@@ -5,6 +5,7 @@ import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
   BookOpen, Plus, Pencil, Power, Send, CalendarDays,
+  ClipboardList, Search, X, Clock3,
 } from "lucide-react";
 import {
   getGetAuthSessionQueryKey, getListEmployeesQueryKey,
@@ -12,11 +13,15 @@ import {
   useChangePassword, useCreateEmployee, useGetAuthSession, useListEmployees,
   useLogin, useLogout, useSetEmployeeActive, useListPublicServiceOfferings,
   useListAdminServiceOfferings, useCreateServiceOffering, useUpdateServiceOffering,
-  useCreateServiceRequest,
+  useCreateServiceRequest, useGetServiceRequest,
+  getListAdminServiceRequestsQueryKey, getGetAdminServiceRequestQueryKey,
+  useListAdminServiceRequests, useGetAdminServiceRequest,
+  useUpdateAdminServiceRequestStatus,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
   ServiceOffering, ServiceRequestCreated,
+  ServiceRequestStatusValue,
 } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
@@ -95,6 +100,9 @@ function SignIn({ session }: { session: AuthenticatedSession | undefined }) {
     <AuthAside />
     <main className="auth-main">
       <section className="auth-card">
+        <Link href="/" className="public-back-home">
+          <ArrowRight size={14} className="public-back-icon" /> Volver al sitio público
+        </Link>
         <p className="eyebrow" style={{ color: "var(--green)", margin: "0 0 13px" }}>INICIO DE SESIÓN</p>
         <h2>Qué bueno verte.</h2>
         <p className="auth-intro">Ingresa con la cuenta que te asignó la administración de Serena.</p>
@@ -212,6 +220,7 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
         {isAdmin && <>
           <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
           <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
+          <Link href="/admin/service-requests" className={`side-link ${location === "/admin/service-requests" ? "active" : ""}`} data-testid="link-admin-service-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
         </>}
       </nav>
       <div className="sidebar-bottom">
@@ -363,6 +372,201 @@ function AdminUsers({ session }: { session: AuthenticatedSession }) {
 
 
 
+
+function PublicHomePage() {
+  const offeringsQuery = useListPublicServiceOfferings();
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  return <main className="public-home">
+    <header className="public-nav">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <nav aria-label="Navegación principal">
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Cómo funciona</a>
+        <Link href="/consultar-solicitud">Consultar solicitud</Link>
+        <Link className="public-nav-staff" href="/personal">Acceso del personal</Link>
+      </nav>
+    </header>
+
+    <section className="public-hero">
+      <div className="public-hero-copy">
+        <p className="public-eyebrow">SERENA · ACOMPAÑAMIENTO Y ATENCIÓN</p>
+        <h1>En los momentos difíciles, <em>no tienes que estar a solas.</em></h1>
+        <p className="public-hero-description">
+          Te acompañamos con respeto, sensibilidad y atención organizada.
+          Nuestro equipo está disponible para orientarte y ayudarte a conocer
+          las alternativas de servicio.
+        </p>
+        <div className="public-hero-actions">
+          <Link className="public-primary-link" href="/solicitar-servicio">
+            Solicitar atención <ArrowRight size={16} />
+          </Link>
+          <Link className="public-secondary-link" href="/consultar-solicitud">
+            Consultar mi solicitud
+          </Link>
+        </div>
+        <div className="public-trust-note">
+          <ShieldCheck size={17} />
+          <span>Atención respetuosa · Información tratada con discreción</span>
+        </div>
+      </div>
+      <div className="public-hero-art" aria-label="Composición decorativa de hojas">
+        <div className="public-art-circle public-art-circle-one"></div>
+        <div className="public-art-circle public-art-circle-two"></div>
+        <div className="public-art-leaf">S</div>
+        <span className="public-art-caption">RESPETO · DIGNIDAD · ACOMPAÑAMIENTO</span>
+      </div>
+    </section>
+
+    <section className="public-intro-strip">
+      <span>UNA ATENCIÓN MÁS HUMANA</span>
+      <p>Escuchamos tus necesidades y te orientamos en cada paso, con claridad y consideración.</p>
+    </section>
+
+    <section className="public-section" id="servicios">
+      <div className="public-section-heading">
+        <div>
+          <p className="public-eyebrow">NUESTRO CATÁLOGO</p>
+          <h2>Servicios disponibles</h2>
+          <p>Conoce las opciones publicadas por nuestro equipo y solicita información.</p>
+        </div>
+        <Link className="public-text-link" href="/solicitar-servicio">
+          Solicitar un servicio <ArrowRight size={15} />
+        </Link>
+      </div>
+
+      {offeringsQuery.isLoading ? <div className="public-feedback">Cargando servicios disponibles…</div>
+      : offeringsQuery.isError ? <div className="public-feedback">
+          No pudimos cargar el catálogo.
+          <button className="quiet-btn" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+        </div>
+      : offerings.length === 0 ? <div className="public-feedback">
+          En este momento no hay servicios publicados. Puedes comunicarte con nuestro equipo mediante el formulario de solicitud.
+        </div>
+      : <div className="public-service-grid">
+          {offerings.map((offering) => <article className="public-service-card" key={offering.id}>
+            <span className="public-service-icon"><BookOpen size={19} /></span>
+            <h3>{offering.name}</h3>
+            <p>{offering.description || "Nuestro equipo puede orientarte sobre este servicio y resolver tus consultas."}</p>
+            <Link to="/solicitar-servicio">Solicitar información <ArrowRight size={14} /></Link>
+          </article>)}
+        </div>}
+    </section>
+
+    <section className="public-process" id="proceso">
+      <div className="public-process-heading">
+        <p className="public-eyebrow">TE ACOMPAÑAMOS</p>
+        <h2>Un proceso claro, paso a paso.</h2>
+        <p>Queremos que sepas qué ocurre después de contactar con Serena.</p>
+      </div>
+      <div className="public-steps">
+        <article><span>01</span><h3>Comparte tu solicitud</h3><p>Indícanos tus datos de contacto y el servicio sobre el que deseas recibir orientación.</p></article>
+        <article><span>02</span><h3>Revisamos la información</h3><p>Nuestro equipo recibe la solicitud y revisa los detalles para dar seguimiento.</p></article>
+        <article><span>03</span><h3>Te contactamos</h3><p>Nos comunicaremos contigo para orientarte sobre los siguientes pasos.</p></article>
+      </div>
+    </section>
+
+    <section className="public-cta">
+      <div><p className="public-eyebrow">ESTAMOS PARA ORIENTARTE</p>
+        <h2>Podemos comenzar por escucharte.</h2>
+        <p>Comparte lo que necesitas y nuestro equipo dará seguimiento a tu solicitud.</p>
+      </div>
+      <Link className="public-primary-link" href="/solicitar-servicio">
+        Iniciar solicitud <ArrowRight size={16} />
+      </Link>
+    </section>
+
+    <footer className="public-footer">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <span>Atención con respeto y dignidad.</span>
+      <div><Link href="/consultar-solicitud">Consultar solicitud</Link><Link href="/personal">Acceso del personal</Link></div>
+      <small>Plataforma de demostración académica.</small>
+    </footer>
+  </main>;
+}
+
+function PublicRequestLookup() {
+  const [reference, setReference] = useState("");
+  const [submittedReference, setSubmittedReference] = useState("");
+  const normalizedReference = submittedReference.trim();
+  const requestQuery = useGetServiceRequest(normalizedReference, {
+    query: { enabled: normalizedReference.length > 0, retry: false },
+  });
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const value = reference.trim();
+    if (!value) return;
+    setSubmittedReference(value);
+  };
+
+  const statusLabels: Record<ServiceRequestStatusValue, string> = {
+    pendiente: "Pendiente",
+    en_revision: "En revisión",
+    confirmada: "Confirmada",
+    rechazada: "Rechazada",
+    cancelada: "Cancelada",
+  };
+
+  return <div className="auth-layout public-request-layout">
+    <AuthAside />
+    <main className="auth-main public-request-main">
+      <section className="auth-card public-request-card">
+        <div className="public-card-navigation">
+          <Link href="/" className="public-brand-home" aria-label="Volver al inicio de Serena">
+            <Brand />
+          </Link>
+          <Link href="/" className="public-back-home">
+            <ArrowRight size={14} className="public-back-icon" /> Volver al inicio
+          </Link>
+        </div>
+        <p className="page-kicker">SEGUIMIENTO DE SOLICITUD</p>
+        <h1 className="page-title">Consulta el estado de tu solicitud.</h1>
+        <p className="auth-intro">
+          Introduce el código de referencia que recibiste al registrar tu solicitud.
+          Te mostraremos su estado actual.
+        </p>
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="lookup-reference">Código de referencia</label>
+            <input id="lookup-reference" required maxLength={80}
+              value={reference} onChange={(event) => setReference(event.target.value)}
+              placeholder="Ej. SER-XXXXXXXX" autoComplete="off" />
+          </div>
+          <button className="primary-btn" type="submit">Consultar estado <Search size={15} /></button>
+        </form>
+
+        {normalizedReference && <>
+          {requestQuery.isFetching && <div className="public-lookup-result" role="status">Consultando referencia…</div>}
+          {requestQuery.isError && !requestQuery.isFetching && <div className="page-inline-error" role="alert">
+            No encontramos una solicitud con esa referencia o no fue posible completar la consulta. Verifica el código e inténtalo de nuevo.
+            <button className="quiet-btn" type="button" onClick={() => requestQuery.refetch()}>Reintentar</button>
+          </div>}
+          {requestQuery.data && <div className="public-lookup-result" aria-live="polite">
+            <span className="public-eyebrow">RESULTADO DE CONSULTA</span>
+            <strong className="public-lookup-code">{requestQuery.data.referenceCode}</strong>
+            <span className={`pill request-status status-${requestQuery.data.status}`}>
+              {statusLabels[requestQuery.data.status]}
+            </span>
+            <p>{requestQuery.data.message}</p>
+          </div>}
+        </>}
+
+        <div className="public-request-footer">
+          <Link href="/">Volver al inicio</Link>
+          <Link href="/solicitar-servicio">Registrar una solicitud</Link>
+        </div>
+      </section>
+    </main>
+  </div>;
+}
+
 function PublicServiceRequest() {
   const offeringsQuery = useListPublicServiceOfferings();
   const createRequest = useCreateServiceRequest();
@@ -405,7 +609,14 @@ function PublicServiceRequest() {
     <AuthAside />
     <main className="auth-main public-request-main">
       <section className="auth-card public-request-card">
-        <Brand />
+        <div className="public-card-navigation">
+          <Link href="/" className="public-brand-home" aria-label="Volver al inicio de Serena">
+            <Brand />
+          </Link>
+          <Link href="/" className="public-back-home">
+            <ArrowRight size={14} className="public-back-icon" /> Volver al inicio
+          </Link>
+        </div>
         {result ? <>
           <span className="state-symbol"><CheckCircle2 size={18} /></span>
           <p className="page-kicker">SOLICITUD REGISTRADA</p>
@@ -484,7 +695,7 @@ function PublicServiceRequest() {
                 {createRequest.isPending ? "Enviando solicitud…" : <>Enviar solicitud <Send size={15} /></>}
               </button>
             </form>}
-          <div className="public-request-footer"><Link href="/">Acceso para personal Serena</Link></div>
+          <div className="public-request-footer"><Link href="/personal">Acceso para personal Serena</Link></div>
         </>}
       </section>
     </main>
@@ -650,6 +861,289 @@ function AdminServiceOfferings({ session }: { session: AuthenticatedSession }) {
   </WorkspaceShell>;
 }
 
+
+const REQUEST_STATUSES: ServiceRequestStatusValue[] = [
+  "pendiente", "en_revision", "confirmada", "rechazada", "cancelada",
+];
+
+const STATUS_LABELS: Record<ServiceRequestStatusValue, string> = {
+  pendiente: "Pendiente",
+  en_revision: "En revisión",
+  confirmada: "Confirmada",
+  rechazada: "Rechazada",
+  cancelada: "Cancelada",
+};
+
+const NEXT_STATUSES: Record<ServiceRequestStatusValue, ServiceRequestStatusValue[]> = {
+  pendiente: ["en_revision", "rechazada", "cancelada"],
+  en_revision: ["confirmada", "rechazada", "cancelada"],
+  confirmada: ["cancelada"],
+  rechazada: [],
+  cancelada: [],
+};
+
+function formatRequestDate(value?: string | null) {
+  if (!value) return "Sin fecha definida";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function AdminServiceRequests({ session }: { session: AuthenticatedSession }) {
+  const client = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [nextStatus, setNextStatus] = useState<ServiceRequestStatusValue | "">("");
+  const [observation, setObservation] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const listQuery = useListAdminServiceRequests({
+    status: statusFilter ? statusFilter as ServiceRequestStatusValue : undefined,
+    search: search.trim() || undefined,
+    page,
+    limit: 20,
+  });
+
+  const detailQuery = useGetAdminServiceRequest(selectedId ?? "", {
+    query: { enabled: Boolean(selectedId) },
+  });
+
+  const updateStatus = useUpdateAdminServiceRequestStatus();
+
+  const requests = listQuery.data?.serviceRequests ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedRequest = detailQuery.data?.serviceRequest;
+  const availableStatuses = selectedRequest
+    ? NEXT_STATUSES[selectedRequest.status]
+    : [];
+
+  const openDetail = (requestId: string) => {
+    setSelectedId(requestId);
+    setNextStatus("");
+    setObservation("");
+    setError("");
+    setNotice("");
+  };
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setNextStatus("");
+    setObservation("");
+    setError("");
+  };
+
+  const submitStatus = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedId || !nextStatus) return;
+
+    setError("");
+    setNotice("");
+
+    updateStatus.mutate({
+      requestId: selectedId,
+      data: {
+        status: nextStatus,
+        ...(observation.trim() ? { observation: observation.trim() } : {}),
+      },
+    }, {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListAdminServiceRequestsQueryKey() });
+        client.invalidateQueries({ queryKey: getGetAdminServiceRequestQueryKey(selectedId) });
+        setNextStatus("");
+        setObservation("");
+        setNotice("El estado de la solicitud se actualizó y quedó registrado en el historial.");
+      },
+      onError: (mutationError) => setError(getErrorMessage(
+        mutationError,
+        "No pudimos actualizar el estado. Es posible que la solicitud haya cambiado; vuelve a cargarla.",
+      )),
+    });
+  };
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ADMINISTRACIÓN</p>
+      <h1 className="page-title">Seguimiento de solicitudes.</h1>
+      <p className="page-subtitle">
+        Consulta las solicitudes recibidas, revisa sus datos y registra cada cambio de estado.
+        Las modificaciones quedan documentadas en el historial.
+      </p>
+
+      <div className="request-filters">
+        <label className="request-search">
+          <Search size={16} />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+            placeholder="Buscar por referencia, contacto o teléfono"
+            aria-label="Buscar solicitudes"
+          />
+        </label>
+        <label className="request-status-filter">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {REQUEST_STATUSES.map((status) =>
+              <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+            )}
+          </select>
+        </label>
+      </div>
+
+      {error && !selectedId && <div className="page-inline-error" role="alert">{error}</div>}
+      {notice && !selectedId && <div className="success-banner" role="status">{notice}</div>}
+
+      <div className="admin-actions">
+        <span className="catalog-count">
+          {pagination ? `${pagination.total} solicitudes encontradas` : "Solicitudes recibidas"}
+        </span>
+        <button className="quiet-btn" type="button" onClick={() => listQuery.refetch()}>
+          <RefreshCw size={14} /> Actualizar
+        </button>
+      </div>
+
+      {listQuery.isLoading ? <div className="loading-state">Cargando solicitudes…</div>
+      : listQuery.isError ? <>
+          <div className="success-banner demo-mode-banner" role="status">
+            VISTA DE DEMOSTRACIÓN · Datos ficticios, no guardados en el sistema.
+          </div>
+          <div className="table-wrap">
+            <table className="employee-table request-table">
+              <thead><tr>
+                <th>Referencia</th><th>Contacto</th><th>Servicio</th><th>Fecha solicitada</th><th>Estado</th><th>Detalle</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td><strong className="request-reference-cell">SER-DEMO-001</strong></td>
+                  <td><span className="request-contact"><strong>María Fernanda López</strong><small>0412-555-0182</small></span></td>
+                  <td>Servicio funerario integral</td>
+                  <td>05/11/2026</td>
+                  <td><span className="pill request-status status-pendiente">Pendiente</span></td>
+                  <td><span className="catalog-count">Ejemplo</span></td>
+                </tr>
+                <tr>
+                  <td><strong className="request-reference-cell">SER-DEMO-002</strong></td>
+                  <td><span className="request-contact"><strong>Carlos Eduardo Ramírez</strong><small>0414-555-0276</small></span></td>
+                  <td>Cremación</td>
+                  <td>07/11/2026</td>
+                  <td><span className="pill request-status status-en_revision">En revisión</span></td>
+                  <td><span className="catalog-count">Ejemplo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="page-subtitle">La conexión con el servidor está pendiente. Los datos de esta tabla son únicamente ilustrativos.</p>
+        </>
+      : requests.length === 0 ? <div className="empty-state">
+          <strong>No hay solicitudes para mostrar</strong>
+          <p>Cuando se reciban solicitudes, aparecerán en este listado.</p>
+        </div>
+      : <div className="table-wrap">
+          <table className="employee-table request-table">
+            <thead><tr>
+              <th>Referencia</th><th>Contacto</th><th>Servicio</th><th>Fecha solicitada</th><th>Estado</th><th>Detalle</th>
+            </tr></thead>
+            <tbody>{requests.map((request) => <tr key={request.id}>
+              <td><strong className="request-reference-cell">{request.referenceCode}</strong></td>
+              <td><span className="request-contact"><strong>{request.contactName}</strong><small>{request.contactPhone}</small></span></td>
+              <td>{request.serviceType}</td>
+              <td>{request.requestedDate ? formatRequestDate(request.requestedDate) : "No especificada"}</td>
+              <td><span className={`pill request-status status-${request.status}`}>{STATUS_LABELS[request.status]}</span></td>
+              <td><button className="table-action" type="button" onClick={() => openDetail(request.id)}>Ver solicitud</button></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+
+      {pagination && pagination.totalPages > 1 && <div className="request-pagination">
+        <span>Página {pagination.page} de {pagination.totalPages}</span>
+        <div>
+          <button className="table-action" type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</button>
+          <button className="table-action" type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Siguiente</button>
+        </div>
+      </div>}
+    </section>
+
+    {selectedId && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !updateStatus.isPending) closeDetail();
+    }}>
+      <section className="modal request-detail-modal" role="dialog" aria-modal="true" aria-labelledby="request-detail-title">
+        <div className="modal-head">
+          <div>
+            <p className="page-kicker">EXPEDIENTE DE SOLICITUD</p>
+            <h2 id="request-detail-title">{selectedRequest?.referenceCode ?? "Detalle de solicitud"}</h2>
+            <p>Información de contacto, estado actual e historial de seguimiento.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={closeDetail} disabled={updateStatus.isPending} aria-label="Cerrar detalle"><X size={17} /></button>
+        </div>
+
+        {detailQuery.isLoading ? <div className="loading-state">Cargando expediente…</div>
+        : detailQuery.isError || !selectedRequest ? <div className="error-state">
+            <strong>No pudimos cargar el expediente.</strong>
+            <p>Vuelve a intentarlo.</p>
+            <button className="quiet-btn" type="button" onClick={() => detailQuery.refetch()}>Reintentar</button>
+          </div>
+        : <>
+            {error && <div className="page-inline-error" role="alert">{error}</div>}
+            {notice && <div className="success-banner" role="status">{notice}</div>}
+
+            <div className="request-detail-grid">
+              <div><small>Persona de contacto</small><strong>{selectedRequest.contactName}</strong></div>
+              <div><small>Teléfono</small><strong>{selectedRequest.contactPhone}</strong></div>
+              <div><small>Servicio solicitado</small><strong>{selectedRequest.serviceType}</strong></div>
+              <div><small>Fecha solicitada</small><strong>{formatRequestDate(selectedRequest.requestedDate)}</strong></div>
+              <div><small>Recibida</small><strong>{formatRequestDate(selectedRequest.createdAt)}</strong></div>
+              <div><small>Estado actual</small><strong><span className={`pill request-status status-${selectedRequest.status}`}>{STATUS_LABELS[selectedRequest.status]}</span></strong></div>
+            </div>
+
+            {selectedRequest.notes && <div className="request-notes">
+              <small>Notas de la solicitud</small><p>{selectedRequest.notes}</p>
+            </div>}
+
+            <div className="request-history">
+              <h3><Clock3 size={16} /> Historial de estados</h3>
+              {(detailQuery.data?.history ?? []).length === 0
+                ? <p className="request-history-empty">No hay movimientos registrados.</p>
+                : <ol>{(detailQuery.data?.history ?? []).map((entry) => <li key={entry.id}>
+                    <span className="request-history-dot" />
+                    <div>
+                      <strong>{entry.previousStatus ? `${STATUS_LABELS[entry.previousStatus]} → ` : ""}{STATUS_LABELS[entry.newStatus]}</strong>
+                      <small>{formatRequestDate(entry.createdAt)} · {entry.changedByName || "Formulario público"}</small>
+                      {entry.observation && <p>{entry.observation}</p>}
+                    </div>
+                  </li>)}</ol>}
+            </div>
+
+            {availableStatuses.length > 0 ? <form className="request-update-form" onSubmit={submitStatus}>
+              <h3>Registrar cambio de estado</h3>
+              <label>
+                Nuevo estado
+                <select required value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ServiceRequestStatusValue | "")}>
+                  <option value="">Selecciona el nuevo estado</option>
+                  {availableStatuses.map((status) => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}
+                </select>
+              </label>
+              <label>
+                Observación <span>(opcional)</span>
+                <textarea rows={3} maxLength={1000} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Añade contexto sobre la decisión o gestión realizada." />
+              </label>
+              <button className="primary-btn" type="submit" disabled={!nextStatus || updateStatus.isPending}>
+                {updateStatus.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+                {updateStatus.isPending ? "Guardando…" : "Guardar cambio"}
+              </button>
+            </form> : <p className="request-terminal-note">Esta solicitud no admite más cambios de estado.</p>}
+          </>}
+      </section>
+    </div>}
+  </WorkspaceShell>;
+}
+
 function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
@@ -663,7 +1157,9 @@ function ProtectedRoute({ session, children, adminOnly = false }: { session: Aut
 function AppRoutes() {
   const [location] = useLocation();
   const sessionQuery = useGetAuthSession({ query: { queryKey: getGetAuthSessionQueryKey(), retry: false } });
+  if (location === "/") return <PublicHomePage />;
   if (location === "/solicitar-servicio") return <PublicServiceRequest />;
+  if (location === "/consultar-solicitud") return <PublicRequestLookup />;
   const unauthorized = isUnauthorized(sessionQuery.error);
   const session = unauthorized ? undefined : sessionQuery.data;
   if (sessionQuery.isLoading) return <AuthLoading />;
@@ -674,11 +1170,12 @@ function AppRoutes() {
     </section></main></div>;
   }
   return <Switch>
-    <Route path="/"><SignIn session={session} /></Route>
+    <Route path="/personal"><SignIn session={session} /></Route>
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/service-requests">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />
   </Switch>;
 }
