@@ -4,7 +4,7 @@ import { Link, Redirect, Route, Switch, useLocation } from "wouter";
 import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
-  BookOpen, Plus, Pencil, Power, Send, CalendarDays,
+  BookOpen, Plus, Pencil, Power, Send, CalendarDays, ClipboardList,
 } from "lucide-react";
 import {
   getGetAuthSessionQueryKey, getListEmployeesQueryKey,
@@ -12,11 +12,13 @@ import {
   useChangePassword, useCreateEmployee, useGetAuthSession, useListEmployees,
   useLogin, useLogout, useSetEmployeeActive, useListPublicServiceOfferings,
   useListAdminServiceOfferings, useCreateServiceOffering, useUpdateServiceOffering,
-  useCreateServiceRequest,
+  useCreateServiceRequest, useListServiceRequests, useGetServiceRequestDetail,
+  useUpdateServiceRequestStatus, getListServiceRequestsQueryKey,
+  getGetServiceRequestDetailQueryKey,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
-  ServiceOffering, ServiceRequestCreated,
+  ServiceOffering, ServiceRequestCreated, ServiceRequestSummary,
 } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
@@ -209,6 +211,7 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
       <nav aria-label="Navegación del espacio">
         <div className="nav-label">Espacio de trabajo</div>
         <Link href="/app" className={`side-link ${location === "/app" ? "active" : ""}`} data-testid="link-workspace-home"><UserRound size={16} /><span>Inicio</span></Link>
+        <Link href="/app/solicitudes" className={`side-link ${location === "/app/solicitudes" ? "active" : ""}`} data-testid="link-staff-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
         {isAdmin && <>
           <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
           <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
@@ -650,6 +653,280 @@ function AdminServiceOfferings({ session }: { session: AuthenticatedSession }) {
   </WorkspaceShell>;
 }
 
+
+const REQUEST_STATUS_LABELS: Record<ServiceRequestSummary["status"], string> = {
+  pendiente: "Pendiente",
+  en_revision: "En revisión",
+  confirmada: "Confirmada",
+  rechazada: "Rechazada",
+  cancelada: "Cancelada",
+};
+
+const REQUEST_STATUS_TONES: Record<ServiceRequestSummary["status"], string> = {
+  pendiente: "pending",
+  en_revision: "pending",
+  confirmada: "active",
+  rechazada: "inactive",
+  cancelada: "inactive",
+};
+
+type RequestStatusFilter = "todas" | ServiceRequestSummary["status"];
+
+const REQUEST_STATUS_FILTERS: Array<{ value: RequestStatusFilter; label: string }> = [
+  { value: "todas", label: "Todas" },
+  { value: "pendiente", label: "Pendientes" },
+  { value: "en_revision", label: "En revisión" },
+  { value: "confirmada", label: "Confirmadas" },
+  { value: "rechazada", label: "Rechazadas" },
+  { value: "cancelada", label: "Canceladas" },
+];
+
+const REQUEST_TRANSITIONS: Record<
+  ServiceRequestSummary["status"],
+  Array<{ status: "en_revision" | "confirmada" | "rechazada" | "cancelada"; label: string; tone: "primary" | "secondary" | "danger" }>
+> = {
+  pendiente: [
+    { status: "en_revision", label: "Pasar a revisión", tone: "primary" },
+    { status: "cancelada", label: "Cancelar", tone: "danger" },
+  ],
+  en_revision: [
+    { status: "confirmada", label: "Confirmar", tone: "primary" },
+    { status: "rechazada", label: "Rechazar", tone: "danger" },
+    { status: "cancelada", label: "Cancelar", tone: "danger" },
+  ],
+  confirmada: [{ status: "cancelada", label: "Cancelar", tone: "danger" }],
+  rechazada: [],
+  cancelada: [],
+};
+
+function formatShortDate(value?: string | null) {
+  if (!value) return "Sin fecha";
+  return new Intl.DateTimeFormat("es", { dateStyle: "medium" }).format(new Date(value));
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("es", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+}
+
+function StatusPill({ status }: { status: ServiceRequestSummary["status"] }) {
+  return <span className={`pill ${REQUEST_STATUS_TONES[status]}`} data-testid={`status-request-${status}`}>{REQUEST_STATUS_LABELS[status]}</span>;
+}
+
+function ServiceRequestDetailPanel({
+  serviceRequestId,
+  canChangeStatus,
+  onClose,
+  onChanged,
+}: {
+  serviceRequestId: string;
+  canChangeStatus: boolean;
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const detailQuery = useGetServiceRequestDetail(serviceRequestId, {
+    query: { queryKey: getGetServiceRequestDetailQueryKey(serviceRequestId) },
+  });
+  const updateStatus = useUpdateServiceRequestStatus();
+  const [pendingReasonFor, setPendingReasonFor] = useState<"rechazada" | "cancelada" | null>(null);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const applyStatus = (status: "en_revision" | "confirmada" | "rechazada" | "cancelada", reasonText: string) => {
+    setError("");
+    setNotice("");
+    updateStatus.mutate(
+      { serviceRequestId, data: { status, ...(reasonText ? { reason: reasonText } : {}) } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetServiceRequestDetailQueryKey(serviceRequestId) });
+          setPendingReasonFor(null);
+          setReason("");
+          setNotice(`La solicitud quedó en estado "${REQUEST_STATUS_LABELS[status]}".`);
+          onChanged();
+        },
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos cambiar el estado de la solicitud.")),
+      },
+    );
+  };
+
+  if (detailQuery.isLoading) {
+    return <div className="table-wrap"><div className="loading-state">Cargando solicitud…</div></div>;
+  }
+
+  if (detailQuery.isError || !detailQuery.data) {
+    return <div className="table-wrap error-state">
+      <span className="state-symbol"><AlertCircle size={17} /></span>
+      <div>
+        <strong>No pudimos abrir la solicitud.</strong>
+        <p>Comprueba tu sesión y vuelve a intentarlo.</p>
+        <button className="quiet-btn" type="button" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>;
+  }
+
+  const { serviceRequest, history } = detailQuery.data;
+  const transitions = canChangeStatus ? REQUEST_TRANSITIONS[serviceRequest.status] : [];
+
+  return <div className="table-wrap" data-testid="panel-request-detail" style={{ marginTop: 18 }}>
+    <div className="admin-actions" style={{ marginBottom: 6 }}>
+      <div>
+        <span className="request-reference">{serviceRequest.referenceCode}</span>
+        <h2 className="section-title" style={{ marginTop: 8 }}>{serviceRequest.serviceType}</h2>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <StatusPill status={serviceRequest.status} />
+        <button className="quiet-btn" type="button" onClick={onClose} data-testid="button-close-request-detail">Cerrar</button>
+      </div>
+    </div>
+
+    <dl style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14, margin: "16px 0" }}>
+      <div><dt style={{ color: "var(--muted)", fontSize: 10 }}>Solicitante</dt><dd style={{ margin: "4px 0 0", fontSize: 12 }}>{serviceRequest.contactName}</dd></div>
+      <div><dt style={{ color: "var(--muted)", fontSize: 10 }}>Teléfono</dt><dd style={{ margin: "4px 0 0", fontSize: 12 }}>{serviceRequest.contactPhone}</dd></div>
+      <div><dt style={{ color: "var(--muted)", fontSize: 10 }}>Fecha deseada</dt><dd style={{ margin: "4px 0 0", fontSize: 12 }}>{formatShortDate(serviceRequest.requestedDate)}</dd></div>
+      <div><dt style={{ color: "var(--muted)", fontSize: 10 }}>Recibida</dt><dd style={{ margin: "4px 0 0", fontSize: 12 }}>{formatDateTime(serviceRequest.createdAt)}</dd></div>
+    </dl>
+
+    {serviceRequest.notes && <p style={{ fontSize: 12, color: "var(--muted)" }}>{serviceRequest.notes}</p>}
+
+    {notice && <div className="success-banner" role="status"><CheckCircle2 size={17} /><span>{notice}</span></div>}
+    {error && <div className="page-inline-error" role="alert" data-testid="status-request-action-error">{error}</div>}
+
+    {canChangeStatus && transitions.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "16px 0" }}>
+      {transitions.map((transition) => <button
+        key={transition.status}
+        type="button"
+        className={transition.tone === "danger" ? "danger-btn" : transition.tone === "primary" ? "primary-btn" : "secondary-btn"}
+        style={{ width: "auto" }}
+        disabled={updateStatus.isPending}
+        data-testid={`button-request-status-${transition.status}`}
+        onClick={() => {
+          if (transition.status === "rechazada" || transition.status === "cancelada") {
+            setPendingReasonFor(transition.status);
+            setReason("");
+            setNotice("");
+          } else {
+            applyStatus(transition.status, "");
+          }
+        }}
+      >{transition.label}</button>)}
+    </div>}
+
+    {canChangeStatus && !REQUEST_TRANSITIONS[serviceRequest.status].length && <p className="form-note" style={{ fontSize: 11 }}>Esta solicitud está cerrada y no admite más cambios de estado.</p>}
+
+    {pendingReasonFor && <div style={{ border: "1px solid var(--line, #dcd8cf)", padding: 14, marginBottom: 18 }}>
+      <p style={{ fontSize: 12, marginTop: 0 }}>
+        Motivo del {pendingReasonFor === "rechazada" ? "rechazo" : "cancelación"} (obligatorio)
+      </p>
+      <div className="field">
+        <textarea
+          rows={3}
+          maxLength={500}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          data-testid="input-request-status-reason"
+        />
+      </div>
+      <div className="modal-actions">
+        <button className="quiet-btn" type="button" onClick={() => { setPendingReasonFor(null); setReason(""); }}>Volver</button>
+        <button
+          className="danger-btn"
+          type="button"
+          disabled={updateStatus.isPending || reason.trim().length < 3}
+          onClick={() => applyStatus(pendingReasonFor, reason.trim())}
+          data-testid="button-confirm-request-status"
+        >{updateStatus.isPending ? "Guardando…" : "Confirmar cambio"}</button>
+      </div>
+    </div>}
+
+    <h2 className="section-title" style={{ marginTop: 22 }}>Historial de estados</h2>
+    <ol style={{ listStyle: "none", padding: 0, margin: "12px 0 6px", display: "grid", gap: 12 }}>
+      {history.map((entry) => <li key={entry.id} style={{ borderLeft: "2px solid var(--line, #dcd8cf)", paddingLeft: 12 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <strong style={{ fontSize: 12 }}>{REQUEST_STATUS_LABELS[entry.newStatus]}</strong>
+          <span style={{ color: "var(--muted)", fontSize: 10 }}>{formatDateTime(entry.createdAt)}</span>
+        </div>
+        <p style={{ margin: "4px 0 0", fontSize: 11, color: "var(--muted)" }}>
+          {entry.changedByName ? `Registrado por ${entry.changedByName}` : "Registro automático del sistema"}
+        </p>
+        {entry.reason && <p style={{ margin: "4px 0 0", fontSize: 11 }}>Motivo: {entry.reason}</p>}
+      </li>)}
+    </ol>
+  </div>;
+}
+
+function StaffServiceRequests({ session }: { session: AuthenticatedSession }) {
+  const [filter, setFilter] = useState<RequestStatusFilter>("todas");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const canChangeStatus = session.user.role === "administrador";
+  const params = filter === "todas" ? undefined : { status: filter };
+  const listQuery = useListServiceRequests(params, {
+    query: { queryKey: getListServiceRequestsQueryKey(params) },
+  });
+  const requests = listQuery.data?.serviceRequests ?? [];
+  const pendingCount = requests.filter((request) => request.status === "pendiente" || request.status === "en_revision").length;
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">SOLICITUDES</p>
+      <h1 className="page-title">Solicitudes recibidas.</h1>
+      <p className="page-subtitle">Revisa las solicitudes del formulario público, cambia su estado y consulta el historial de cada una. Una solicitud recibida no está confirmada.</p>
+
+      <div className="admin-actions">
+        <span className="catalog-count">{listQuery.isLoading ? "Consultando…" : `${requests.length} ${requests.length === 1 ? "solicitud" : "solicitudes"}`}{pendingCount > 0 ? ` · ${pendingCount} por atender` : ""}</span>
+        <button className="quiet-btn" type="button" onClick={() => listQuery.refetch()} disabled={listQuery.isFetching} data-testid="button-refresh-requests"><RefreshCw size={14} /> Actualizar</button>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "14px 0" }}>
+        {REQUEST_STATUS_FILTERS.map((option) => <button
+          key={option.value}
+          type="button"
+          className={filter === option.value ? "primary-btn" : "quiet-btn"}
+          style={{ width: "auto", padding: "6px 12px", fontSize: 11 }}
+          data-testid={`button-filter-requests-${option.value}`}
+          onClick={() => setFilter(option.value)}
+        >{option.label}</button>)}
+      </div>
+
+      {listQuery.isLoading ? <div className="table-wrap"><div className="loading-state">Cargando solicitudes…</div></div>
+      : listQuery.isError ? <div className="table-wrap error-state">
+          <span className="state-symbol"><AlertCircle size={17} /></span>
+          <div><strong>No pudimos cargar las solicitudes.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p>
+            <button className="quiet-btn" style={{ marginTop: 15 }} type="button" onClick={() => listQuery.refetch()}><RefreshCw size={14} /> Reintentar</button>
+          </div>
+        </div>
+      : requests.length === 0 ? <div className="table-wrap empty-state">
+          <span className="state-symbol"><ClipboardList size={17} /></span>
+          <div><strong>No hay solicitudes en esta vista</strong><p>Cuando alguien envíe el formulario público aparecerá aquí.</p></div>
+        </div>
+      : <div className="table-wrap">
+          <table className="employee-table">
+            <thead><tr><th>Referencia</th><th>Servicio</th><th>Contacto</th><th>Estado</th><th>Recibida</th><th>Acción</th></tr></thead>
+            <tbody>
+              {requests.map((request) => <tr key={request.id} data-testid={`row-request-${request.referenceCode}`}>
+                <td><span className="request-reference">{request.referenceCode}</span></td>
+                <td><div className="employee-name"><strong>{request.serviceType}</strong><small>{formatShortDate(request.requestedDate)}</small></div></td>
+                <td><div className="employee-name"><strong>{request.contactName}</strong><small>{request.contactPhone}</small></div></td>
+                <td><StatusPill status={request.status} /></td>
+                <td>{formatShortDate(request.createdAt)}</td>
+                <td><button className="table-action" type="button" data-testid={`button-open-request-${request.referenceCode}`} onClick={() => setSelectedId(request.id)}>Ver</button></td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>}
+
+      {selectedId && <ServiceRequestDetailPanel
+        serviceRequestId={selectedId}
+        canChangeStatus={canChangeStatus}
+        onClose={() => setSelectedId(null)}
+        onChanged={() => listQuery.refetch()}
+      />}
+    </section>
+  </WorkspaceShell>;
+}
+
 function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
@@ -677,6 +954,7 @@ function AppRoutes() {
     <Route path="/"><SignIn session={session} /></Route>
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />

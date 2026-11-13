@@ -307,3 +307,103 @@ export const UpdateServiceOfferingResponse = zod.object({
 })
 
 
+/**
+ * @summary List service requests for staff review
+ */
+export const ListServiceRequestsQueryParams = zod.object({
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']).optional()
+})
+
+export const ListServiceRequestsResponse = zod.object({
+  "serviceRequests": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.string().uuid().nullish(),
+  "requestedDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get one service request with its status history
+ */
+export const GetServiceRequestDetailParams = zod.object({
+  "serviceRequestId": zod.coerce.string().uuid()
+})
+
+export const GetServiceRequestDetailResponse = zod.object({
+  "serviceRequest": zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.string().uuid().nullish(),
+  "requestedDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.literal('pendiente'),zod.literal('en_revision'),zod.literal('confirmada'),zod.literal('rechazada'),zod.literal('cancelada'),zod.literal(null)]).nullish(),
+  "newStatus": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "changedByUserId": zod.string().uuid().nullish(),
+  "changedByName": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Only transitions allowed by the documented state matrix are accepted. Rejections and cancellations require a reason.
+ * @summary Change the status of a service request
+ */
+export const UpdateServiceRequestStatusParams = zod.object({
+  "serviceRequestId": zod.coerce.string().uuid()
+})
+
+export const updateServiceRequestStatusBodyReasonMax = 500;
+
+
+
+export const UpdateServiceRequestStatusBody = zod.object({
+  "status": zod.enum(['en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "reason": zod.string().max(updateServiceRequestStatusBodyReasonMax).optional()
+})
+
+export const UpdateServiceRequestStatusResponse = zod.object({
+  "serviceRequest": zod.object({
+  "id": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "contactName": zod.string(),
+  "contactPhone": zod.string(),
+  "serviceType": zod.string(),
+  "serviceOfferingId": zod.string().uuid().nullish(),
+  "requestedDate": zod.coerce.date().nullish(),
+  "notes": zod.string().nullish(),
+  "status": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.literal('pendiente'),zod.literal('en_revision'),zod.literal('confirmada'),zod.literal('rechazada'),zod.literal('cancelada'),zod.literal(null)]).nullish(),
+  "newStatus": zod.enum(['pendiente', 'en_revision', 'confirmada', 'rechazada', 'cancelada']),
+  "changedByUserId": zod.string().uuid().nullish(),
+  "changedByName": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+

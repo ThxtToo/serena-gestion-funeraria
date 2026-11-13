@@ -1,4 +1,5 @@
 import {
+  index,
   pgEnum,
   pgTable,
   text,
@@ -6,6 +7,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { usersTable } from "./auth";
 import { serviceOfferingsTable } from "./service-offerings";
 
 export const serviceRequestStatus = pgEnum("service_request_status", [
@@ -46,3 +48,40 @@ export const insertServiceRequestSchema = createInsertSchema(
 });
 
 export type ServiceRequest = typeof serviceRequestsTable.$inferSelect;
+
+/**
+ * Historial de cambios de estado de una solicitud.
+ *
+ * Los registros no se modifican ni se eliminan desde la aplicación: solo se
+ * insertan, y siempre dentro de la misma transacción que actualiza
+ * `service_requests.status`.
+ */
+export const serviceRequestStatusHistoryTable = pgTable(
+  "service_request_status_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    serviceRequestId: uuid("service_request_id")
+      .notNull()
+      .references(() => serviceRequestsTable.id, { onDelete: "cascade" }),
+    previousStatus: serviceRequestStatus("previous_status"),
+    newStatus: serviceRequestStatus("new_status").notNull(),
+    changedByUserId: uuid("changed_by_user_id").references(
+      () => usersTable.id,
+      { onDelete: "restrict" },
+    ),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("service_request_status_history_request_idx").on(
+      table.serviceRequestId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export type ServiceRequestStatusHistoryEntry =
+  typeof serviceRequestStatusHistoryTable.$inferSelect;
+

@@ -19,6 +19,8 @@ tags:
     description: Serena staff authentication and session management
   - name: employee-administration
     description: Administrator-only employee account management
+  - name: service-request-management
+    description: Staff review and status tracking of service requests
 
 paths:
   /healthz:
@@ -500,6 +502,150 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /admin/service-requests:
+    get:
+      operationId: listServiceRequests
+      tags: [service-request-management]
+      summary: List service requests for staff review
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - pendiente
+              - en_revision
+              - confirmada
+              - rechazada
+              - cancelada
+      responses:
+        "200":
+          description: Service requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequestList"
+        "400":
+          description: Invalid filter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests/{serviceRequestId}:
+    get:
+      operationId: getServiceRequestDetail
+      tags: [service-request-management]
+      summary: Get one service request with its status history
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: serviceRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service request and history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequestDetail"
+        "400":
+          description: Invalid identifier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests/{serviceRequestId}/status:
+    patch:
+      operationId: updateServiceRequestStatus
+      tags: [service-request-management]
+      summary: Change the status of a service request
+      description: Only transitions allowed by the documented state matrix are accepted. Rejections and cancellations require a reason.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: serviceRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateServiceRequestStatusInput"
+      responses:
+        "200":
+          description: Updated request and full history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRequestDetail"
+        "400":
+          description: Invalid transition or missing reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Not authorized to change the status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -798,6 +944,136 @@ components:
       required:
         - serviceOffering
 
+
+    ServiceRequestSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        referenceCode:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        serviceType:
+          type: string
+        serviceOfferingId:
+          type: string
+          format: uuid
+          nullable: true
+        requestedDate:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - pendiente
+            - en_revision
+            - confirmada
+            - rechazada
+            - cancelada
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - referenceCode
+        - contactName
+        - contactPhone
+        - serviceType
+        - status
+        - createdAt
+        - updatedAt
+
+    ServiceRequestList:
+      type: object
+      properties:
+        serviceRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRequestSummary"
+      required:
+        - serviceRequests
+
+    ServiceRequestStatusHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          type: string
+          nullable: true
+          enum:
+            - pendiente
+            - en_revision
+            - confirmada
+            - rechazada
+            - cancelada
+        newStatus:
+          type: string
+          enum:
+            - pendiente
+            - en_revision
+            - confirmada
+            - rechazada
+            - cancelada
+        changedByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        changedByName:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - newStatus
+        - createdAt
+
+    ServiceRequestDetail:
+      type: object
+      properties:
+        serviceRequest:
+          $ref: "#/components/schemas/ServiceRequestSummary"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRequestStatusHistoryEntry"
+      required:
+        - serviceRequest
+        - history
+
+    UpdateServiceRequestStatusInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+            - en_revision
+            - confirmada
+            - rechazada
+            - cancelada
+        reason:
+          type: string
+          maxLength: 500
+      required:
+        - status
 
     ApiError:
       type: object

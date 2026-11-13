@@ -71,3 +71,50 @@ Las funcionalidades descritas en el alcance no deben considerarse terminadas por
 El proyecto se implementa por fases. Cada módulo deberá contar con validaciones y pruebas antes de considerarse completado.
 
 Las instrucciones específicas para trabajar en el repositorio se encuentran en `AGENTS.md`.
+
+### Requisitos
+
+- Node.js 24
+- pnpm 11
+- PostgreSQL 16
+
+### Puesta en marcha local
+
+```bash
+pnpm install
+cp .env.example .env    # completa DATABASE_URL y SESSION_SECRET
+pnpm --filter @workspace/db push
+```
+
+Con el esquema creado, se levantan las dos partes por separado:
+
+```bash
+# API (por defecto en el puerto 3000 según .env)
+pnpm --filter @workspace/api-server dev
+
+# Frontend (Vite en el puerto 5173)
+PORT=5173 pnpm --filter @workspace/serena-frontend dev
+```
+
+Para cargar datos ficticios de demostración (catálogo, cuentas y solicitudes de ejemplo):
+
+```bash
+pnpm --filter @workspace/api-server seed-demo
+```
+
+La primera cuenta de administración se crea desde una terminal interactiva:
+
+```bash
+pnpm --filter @workspace/api-server bootstrap-admin
+```
+
+No hace falta definir `PORT` ni `BASE_PATH` para el frontend: Vite usa `5173` y `/` por defecto. Ambas variables siguen siendo configurables para despliegues.
+
+### Verificación
+
+El repositorio incluye CI en GitHub Actions (`.github/workflows/verificacion.yml`) que instala dependencias, compila, crea el esquema en un PostgreSQL temporal y ejecuta las pruebas de la API. Las mismas comprobaciones se pueden correr en local:
+
+```bash
+pnpm run build
+pnpm --filter @workspace/api-server test   # requiere DATABASE_URL y el esquema creado
+```

@@ -36,14 +36,18 @@ import type {
   EmployeeList,
   EmployeeStatusResponse,
   HealthStatus,
+  ListServiceRequestsParams,
   LoginInput,
   LogoutResult,
   ServiceOfferingList,
   ServiceOfferingResponse,
   ServiceRequestCreated,
+  ServiceRequestDetail,
+  ServiceRequestList,
   ServiceRequestStatus,
   SetEmployeeActiveInput,
-  UpdateServiceOfferingInput
+  UpdateServiceOfferingInput,
+  UpdateServiceRequestStatusInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1375,5 +1379,304 @@ export const useUpdateServiceOffering = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getUpdateServiceOfferingMutationOptions(options), queryClient);
+    }
+
+export const getListServiceRequestsUrl = (params?: ListServiceRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/service-requests?${stringifiedParams}` : `/api/admin/service-requests`
+}
+
+/**
+ * @summary List service requests for staff review
+ */
+export const listServiceRequests = async (params?: ListServiceRequestsParams, options?: Parameters<typeof customFetch>[1]): Promise<ServiceRequestList> => {
+
+  return customFetch<ServiceRequestList>(getListServiceRequestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListServiceRequestsQueryKey = (params?: ListServiceRequestsParams,) => {
+    return [
+    `/api/admin/service-requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListServiceRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listServiceRequests>>, TError = ErrorType<ApiError>>(params?: ListServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListServiceRequestsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listServiceRequests>>> = ({ signal }) => listServiceRequests(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListServiceRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listServiceRequests>>>
+export type ListServiceRequestsQueryError = ErrorType<ApiError>
+
+
+export function useListServiceRequests<TData = Awaited<ReturnType<typeof listServiceRequests>>, TError = ErrorType<ApiError>>(
+ params: undefined |  ListServiceRequestsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListServiceRequests<TData = Awaited<ReturnType<typeof listServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceRequests>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListServiceRequests<TData = Awaited<ReturnType<typeof listServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List service requests for staff review
+ */
+
+export function useListServiceRequests<TData = Awaited<ReturnType<typeof listServiceRequests>>, TError = ErrorType<ApiError>>(
+ params?: ListServiceRequestsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceRequests>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListServiceRequestsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetServiceRequestDetailUrl = (serviceRequestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${serviceRequestId}`
+}
+
+/**
+ * @summary Get one service request with its status history
+ */
+export const getServiceRequestDetail = async (serviceRequestId: string, options?: Parameters<typeof customFetch>[1]): Promise<ServiceRequestDetail> => {
+
+  return customFetch<ServiceRequestDetail>(getGetServiceRequestDetailUrl(serviceRequestId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetServiceRequestDetailQueryKey = (serviceRequestId: string,) => {
+    return [
+    `/api/admin/service-requests/${serviceRequestId}`
+    ] as const;
+    }
+
+
+export const getGetServiceRequestDetailQueryOptions = <TData = Awaited<ReturnType<typeof getServiceRequestDetail>>, TError = ErrorType<ApiError>>(serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetServiceRequestDetailQueryKey(serviceRequestId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getServiceRequestDetail>>> = ({ signal }) => getServiceRequestDetail(serviceRequestId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: serviceRequestId !== null && serviceRequestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetServiceRequestDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getServiceRequestDetail>>>
+export type GetServiceRequestDetailQueryError = ErrorType<ApiError>
+
+
+export function useGetServiceRequestDetail<TData = Awaited<ReturnType<typeof getServiceRequestDetail>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getServiceRequestDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getServiceRequestDetail>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetServiceRequestDetail<TData = Awaited<ReturnType<typeof getServiceRequestDetail>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getServiceRequestDetail>>,
+          TError,
+          Awaited<ReturnType<typeof getServiceRequestDetail>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetServiceRequestDetail<TData = Awaited<ReturnType<typeof getServiceRequestDetail>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get one service request with its status history
+ */
+
+export function useGetServiceRequestDetail<TData = Awaited<ReturnType<typeof getServiceRequestDetail>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getServiceRequestDetail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetServiceRequestDetailQueryOptions(serviceRequestId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateServiceRequestStatusUrl = (serviceRequestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${serviceRequestId}/status`
+}
+
+/**
+ * Only transitions allowed by the documented state matrix are accepted. Rejections and cancellations require a reason.
+ * @summary Change the status of a service request
+ */
+export const updateServiceRequestStatus = async (serviceRequestId: string,
+    updateServiceRequestStatusInput: UpdateServiceRequestStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<ServiceRequestDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ServiceRequestDetail>(getUpdateServiceRequestStatusUrl(serviceRequestId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateServiceRequestStatusInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateServiceRequestStatusMutationKey = () => ['updateServiceRequestStatus'] as const;
+
+export const getUpdateServiceRequestStatusMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateServiceRequestStatus>>, TError,UpdateServiceRequestStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateServiceRequestStatus>>, TError,UpdateServiceRequestStatusMutationVariables, TContext> => {
+
+const mutationKey = getUpdateServiceRequestStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateServiceRequestStatus>>, UpdateServiceRequestStatusMutationVariables> = (props) => {
+          const {serviceRequestId,data} = props ?? {};
+
+          return  updateServiceRequestStatus(serviceRequestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateServiceRequestStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateServiceRequestStatus>>>
+    export type UpdateServiceRequestStatusMutationBody = BodyType<UpdateServiceRequestStatusInput>
+    export type UpdateServiceRequestStatusMutationError = ErrorType<ApiError>
+    export type UpdateServiceRequestStatusMutationVariables = {serviceRequestId: string;data: BodyType<UpdateServiceRequestStatusInput>}
+
+    /**
+ * @summary Change the status of a service request
+ */
+export const useUpdateServiceRequestStatus = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateServiceRequestStatus>>, TError,UpdateServiceRequestStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateServiceRequestStatus>>,
+        TError,
+        UpdateServiceRequestStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateServiceRequestStatusMutationOptions(options), queryClient);
     }
 

@@ -18,6 +18,7 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/scripts/bootstrap-admin.ts"),
+      path.resolve(artifactDir, "src/scripts/seed-demo.ts"),
     ],
     outbase: path.resolve(artifactDir, "src"),
     platform: "node",

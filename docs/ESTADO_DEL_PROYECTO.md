@@ -1,10 +1,10 @@
 # Serena — Estado del proyecto
 
 **Versión del documento:** 0.2
-**Última actualización:** 2026-11-01
-**Fase actual:** Consolidación documental y preparación de implementación
-**Estado general:** Infraestructura base implementada; documentación en revisión
-**Objetivo inmediato:** Cerrar la revisión documental y preparar la siguiente fase de desarrollo.
+**Última actualización:** 2026-11-12
+**Fase actual:** Base funcional del portal y del panel privado
+**Estado general:** Infraestructura y primeros módulos funcionales implementados y compilando
+**Objetivo inmediato:** Completar inventario, recursos e integración del agente de IA.
 
 ## 1. Descripción del proyecto
 
@@ -59,14 +59,16 @@ Las casillas indican que existe una primera versión de cada documento. No signi
 - [x] Autenticación propia.
 - [x] Gestión de sesiones.
 - [x] Administración de cuentas.
+- [x] Catálogo público y administrativo de servicios funerarios.
+- [x] Registro de solicitudes con código de referencia y consulta posterior.
+- [x] Integración de verificación automática (typecheck, compilación y pruebas) en GitHub Actions.
+- [x] Revisión de solicitudes por el personal: listado, detalle, historial de estados y transiciones autorizadas.
+- [x] Carga de datos ficticios de demostración (script `seed-demo`).
 
-Los elementos marcados como implementados corresponden al estado registrado del proyecto. Su funcionamiento deberá volver a comprobarse cuando se realicen cambios que puedan afectarlos.
+El 2026-11-12 se comprobó en local que el typecheck y la compilación de frontend y backend terminan sin errores, y que la instalación con `--frozen-lockfile` funciona. Ese mismo día se añadió la gestión de estados de solicitudes con historial y pruebas de API para esa funcionalidad. Las pruebas requieren PostgreSQL y quedan a cargo del CI: no se ejecutaron en esa comprobación local.
 
 ### 4.2. Módulos funcionales pendientes
 
-- [ ] Portal público integrado con el backend.
-- [ ] Registro y seguimiento completo de solicitudes.
-- [ ] Catálogo administrable de servicios funerarios.
 - [ ] Administración de canales de atención.
 - [ ] Gestión completa de usuarios, roles y permisos.
 - [ ] Gestión de recursos y asignaciones.

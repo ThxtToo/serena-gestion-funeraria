@@ -192,7 +192,114 @@ export interface ServiceOfferingResponse {
   serviceOffering: ServiceOffering;
 }
 
+export type ServiceRequestSummaryStatus = typeof ServiceRequestSummaryStatus[keyof typeof ServiceRequestSummaryStatus];
+
+
+export const ServiceRequestSummaryStatus = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface ServiceRequestSummary {
+  id: string;
+  referenceCode: string;
+  contactName: string;
+  contactPhone: string;
+  serviceType: string;
+  /** @nullable */
+  serviceOfferingId?: string | null;
+  /** @nullable */
+  requestedDate?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  status: ServiceRequestSummaryStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ServiceRequestList {
+  serviceRequests: ServiceRequestSummary[];
+}
+
+/**
+ * @nullable
+ */
+export type ServiceRequestStatusHistoryEntryPreviousStatus = typeof ServiceRequestStatusHistoryEntryPreviousStatus[keyof typeof ServiceRequestStatusHistoryEntryPreviousStatus] | null;
+
+
+export const ServiceRequestStatusHistoryEntryPreviousStatus = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export type ServiceRequestStatusHistoryEntryNewStatus = typeof ServiceRequestStatusHistoryEntryNewStatus[keyof typeof ServiceRequestStatusHistoryEntryNewStatus];
+
+
+export const ServiceRequestStatusHistoryEntryNewStatus = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface ServiceRequestStatusHistoryEntry {
+  id: string;
+  /** @nullable */
+  previousStatus?: ServiceRequestStatusHistoryEntryPreviousStatus;
+  newStatus: ServiceRequestStatusHistoryEntryNewStatus;
+  /** @nullable */
+  changedByUserId?: string | null;
+  /** @nullable */
+  changedByName?: string | null;
+  /** @nullable */
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface ServiceRequestDetail {
+  serviceRequest: ServiceRequestSummary;
+  history: ServiceRequestStatusHistoryEntry[];
+}
+
+export type UpdateServiceRequestStatusInputStatus = typeof UpdateServiceRequestStatusInputStatus[keyof typeof UpdateServiceRequestStatusInputStatus];
+
+
+export const UpdateServiceRequestStatusInputStatus = {
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface UpdateServiceRequestStatusInput {
+  status: UpdateServiceRequestStatusInputStatus;
+  /** @maxLength 500 */
+  reason?: string;
+}
+
 export interface ApiError {
   error: string;
 }
+
+export type ListServiceRequestsParams = {
+status?: ListServiceRequestsStatus;
+};
+
+export type ListServiceRequestsStatus = typeof ListServiceRequestsStatus[keyof typeof ListServiceRequestsStatus];
+
+
+export const ListServiceRequestsStatus = {
+  pendiente: 'pendiente',
+  en_revision: 'en_revision',
+  confirmada: 'confirmada',
+  rechazada: 'rechazada',
+  cancelada: 'cancelada',
+} as const;
 

@@ -10,6 +10,7 @@ import {
 import {
   db,
   serviceOfferingsTable,
+  serviceRequestStatusHistoryTable,
   serviceRequestsTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -58,9 +59,19 @@ router.post("/service-requests", async (req, res) => {
           status: "pendiente",
         })
         .returning({
+          id: serviceRequestsTable.id,
           referenceCode: serviceRequestsTable.referenceCode,
           status: serviceRequestsTable.status,
         });
+
+      // Registro inicial del historial: sin estado anterior y sin usuario,
+      // porque lo genera el sistema al recibir la solicitud.
+      await tx.insert(serviceRequestStatusHistoryTable).values({
+        serviceRequestId: created.id,
+        previousStatus: null,
+        newStatus: "pendiente",
+        changedByUserId: null,
+      });
 
       return {
         unavailable: false as const,
