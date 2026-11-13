@@ -5,6 +5,7 @@ import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
   BookOpen, Plus, Pencil, Power, Send, CalendarDays, ClipboardList, Package, Warehouse,
+  MessageCircle,
 } from "lucide-react";
 import {
   getGetAuthSessionQueryKey, getListEmployeesQueryKey,
@@ -20,6 +21,7 @@ import {
   useUpdateInventoryItem, useListResources, getListResourcesQueryKey,
   useCreateResource, useUpdateResource, useListRequestAssignments,
   getListRequestAssignmentsQueryKey, useCreateResourceAssignment, useCancelResourceAssignment,
+  useAgentChat,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
@@ -220,6 +222,7 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
         <Link href="/app/solicitudes" className={`side-link ${location === "/app/solicitudes" ? "active" : ""}`} data-testid="link-staff-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
         <Link href="/app/inventario" className={`side-link ${location === "/app/inventario" ? "active" : ""}`} data-testid="link-inventory"><Package size={16} /><span>Inventario</span></Link>
         <Link href="/app/recursos" className={`side-link ${location === "/app/recursos" ? "active" : ""}`} data-testid="link-resources"><Warehouse size={16} /><span>Recursos</span></Link>
+        <Link href="/app/asistente" className={`side-link ${location === "/app/asistente" ? "active" : ""}`} data-testid="link-agent"><MessageCircle size={16} /><span>Asistente</span></Link>
         {isAdmin && <>
           <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
           <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
@@ -1315,6 +1318,76 @@ function RequestAssignmentsPanel({ serviceRequestId, suggestedDate }: { serviceR
   </div>;
 }
 
+
+const AGENT_SUGGESTIONS = [
+  "¿Qué servicios tienen disponibles?",
+  "¿Hay alguna sala libre mañana a las 3 de la tarde?",
+  "Consulta la póliza de demostración DEMO-0001",
+  "Quiero hablar con una persona",
+];
+
+function AgentChatPage({ session }: { session: AuthenticatedSession }) {
+  const chat = useAgentChat();
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+  const [tools, setTools] = useState<string[]>([]);
+
+  const send = (text: string) => {
+    const content = text.trim();
+    if (!content || chat.isPending) return;
+
+    const next = [...messages, { role: "user" as const, content }];
+    setMessages(next);
+    setInput("");
+    setError("");
+
+    chat.mutate(
+      { data: { messages: next.slice(-10) } },
+      {
+        onSuccess: (result) => {
+          setMessages([...next, { role: "assistant", content: result.reply }]);
+          setTools(result.toolsUsed);
+        },
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos hablar con el asistente. Inténtalo de nuevo.")),
+      },
+    );
+  };
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ASISTENTE</p>
+      <h1 className="page-title">Serena responde.</h1>
+      <p className="page-subtitle">Consulta disponibilidad, revisa una solicitud o verifica una póliza ficticia. El asistente solo usa la información del sistema; si no la tiene, lo dice.</p>
+
+      <div className="table-wrap" style={{ marginTop: 16 }}>
+        {messages.length === 0 && <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>
+          <p style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}>Prueba con:</p>
+          {AGENT_SUGGESTIONS.map((suggestion) => <button key={suggestion} className="quiet-btn" type="button" style={{ textAlign: "left" }} onClick={() => send(suggestion)}>{suggestion}</button>)}
+        </div>}
+
+        <div style={{ display: "grid", gap: 12 }}>
+          {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "90%", background: message.role === "user" ? "var(--green, #1f3d2b)" : "transparent", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line, #dcd8cf)", padding: "10px 12px", borderRadius: 10, fontSize: 12, whiteSpace: "pre-wrap" }} data-testid={`message-agent-${message.role}`}>
+            {message.content}
+          </div>)}
+          {chat.isPending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Serena está consultando…</div>}
+        </div>
+
+        {tools.length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
+          {tools.map((tool, index) => <span key={`${tool}-${index}`} className="pill pending">{tool}</span>)}
+        </div>}
+
+        {error && <div className="page-inline-error" role="alert" style={{ marginTop: 12 }}>{error}</div>}
+
+        <form onSubmit={(event) => { event.preventDefault(); send(input); }} style={{ marginTop: 16 }}>
+          <div className="field"><label htmlFor="agent-input">Escribe tu consulta</label><input id="agent-input" value={input} maxLength={2000} onChange={(event) => setInput(event.target.value)} placeholder="¿Qué necesitas saber?" /></div>
+          <button className="primary-btn" type="submit" disabled={chat.isPending || input.trim().length === 0} style={{ width: "auto" }}>{chat.isPending ? "Consultando…" : "Enviar"}</button>
+        </form>
+      </div>
+    </section>
+  </WorkspaceShell>;
+}
+
 function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
@@ -1345,6 +1418,7 @@ function AppRoutes() {
     <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/app/inventario">{session ? <ProtectedRoute session={session}><InventoryPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/app/recursos">{session ? <ProtectedRoute session={session}><ResourcesPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/app/asistente">{session ? <ProtectedRoute session={session}><AgentChatPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />
