@@ -128,7 +128,7 @@ after(async () => {
   }
 });
 
-const context = () => ({ userId: cleanupUserIds[0] ?? randomUUID(), role: "empleado" });
+const context = () => ({ userId: cleanupUserIds[0] ?? randomUUID(), role: "empleado", scope: "staff" as const });
 
 test("el agente exige sesión", async () => {
   const response = await fetch(`${baseUrl}/api/agent/chat`, {
@@ -287,5 +287,5 @@ test("una herramienta no autorizada se rechaza", async () => {
 
   if (outcome.ok) return;
 
-  assert.equal(outcome.errorCode, "herramienta_desconocida");
+  assert.equal(outcome.errorCode, "herramienta_no_autorizada");
 });
