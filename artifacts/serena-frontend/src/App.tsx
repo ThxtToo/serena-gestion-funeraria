@@ -254,7 +254,7 @@ function EmployeeHome({ session }: { session: AuthenticatedSession }) {
     <section className="page-content">
       <p className="page-kicker">ESPACIO DE TRABAJO</p>
       <h1 className="page-title" data-testid="text-welcome-title">Buen día, {user.fullName.split(" ")[0]}.</h1>
-      <p className="page-subtitle">Has iniciado sesión en el espacio interno de Serena. Mantén tu información de acceso protegida y cierra sesión al terminar.</p>
+      <p className="page-subtitle">Desde este espacio se revisan las solicitudes, se controla el inventario, se asignan recursos y se consulta al asistente. Todo con datos de demostración hasta que la funeraria valide el sistema.</p>
       <div className="welcome-panel">
         <div className="welcome-text">
           <h2>Un equipo presente, un trabajo cuidadoso.</h2>
@@ -263,8 +263,13 @@ function EmployeeHome({ session }: { session: AuthenticatedSession }) {
         <span className="welcome-stamp" aria-hidden="true">S</span>
       </div>
       <div className="quick-row">
+        <Link href="/app/solicitudes" className="quick-link" data-testid="link-home-requests"><ClipboardList size={17} /><span>Solicitudes</span><ArrowRight size={14} /></Link>
+        <Link href="/app/inventario" className="quick-link" data-testid="link-home-inventory"><Package size={17} /><span>Inventario</span><ArrowRight size={14} /></Link>
+        <Link href="/app/recursos" className="quick-link" data-testid="link-home-resources"><Warehouse size={17} /><span>Recursos</span><ArrowRight size={14} /></Link>
+        <Link href="/app/asistente" className="quick-link" data-testid="link-home-agent"><MessageCircle size={17} /><span>Asistente</span><ArrowRight size={14} /></Link>
+        {admin && <Link href="/admin/users" className="quick-link" data-testid="link-manage-accounts"><Users size={17} /><span>Cuentas de equipo</span><ArrowRight size={14} /></Link>}
+        {admin && <Link href="/admin/service-offerings" className="quick-link" data-testid="link-home-catalog"><BookOpen size={17} /><span>Catálogo de servicios</span><ArrowRight size={14} /></Link>}
         <Link href="/change-password" className="quick-link" data-testid="link-change-password"><KeyRound size={17} /><span>Cambiar contraseña</span><ArrowRight size={14} /></Link>
-        {admin && <Link href="/admin/users" className="quick-link" data-testid="link-manage-accounts"><Users size={17} /><span>Administrar cuentas</span><ArrowRight size={14} /></Link>}
       </div>
     </section>
   </WorkspaceShell>;
