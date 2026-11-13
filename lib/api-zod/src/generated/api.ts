@@ -926,3 +926,26 @@ export const ListPublicContactChannelsResponse = zod.object({
 })
 
 
+/**
+ * Uses a restricted set of tools and is rate limited per client.
+ * @summary Talk to the assistant without signing in
+ */
+export const publicAgentChatBodyMessagesItemContentMax = 2000;
+
+export const publicAgentChatBodyMessagesMax = 12;
+
+
+
+export const PublicAgentChatBody = zod.object({
+  "messages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(publicAgentChatBodyMessagesItemContentMax)
+})).min(1).max(publicAgentChatBodyMessagesMax)
+})
+
+export const PublicAgentChatResponse = zod.object({
+  "reply": zod.string(),
+  "toolsUsed": zod.array(zod.string())
+})
+
+

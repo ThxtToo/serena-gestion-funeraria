@@ -2,6 +2,7 @@ import { db, agentToolLogsTable } from "@workspace/db";
 import {
   AGENT_TOOL_DEFINITIONS,
   executeTool,
+  isToolAllowed,
   type AgentContext,
 } from "./tools";
 
@@ -55,7 +56,7 @@ function groqConfig() {
 
 async function logToolCall(input: {
   toolName: string;
-  userId: string;
+  userId: string | null;
   status: "ok" | "error";
   safeErrorCode?: string;
 }) {
@@ -103,7 +104,9 @@ export async function runAgent(
       body: JSON.stringify({
         model,
         messages: conversation,
-        tools: AGENT_TOOL_DEFINITIONS,
+        tools: AGENT_TOOL_DEFINITIONS.filter((tool) =>
+          isToolAllowed(tool.function.name, context.scope),
+        ),
         tool_choice: "auto",
         temperature: 0.2,
         max_tokens: MAX_TOKENS,

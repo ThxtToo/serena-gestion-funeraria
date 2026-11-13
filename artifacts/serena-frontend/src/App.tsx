@@ -21,7 +21,7 @@ import {
   useUpdateInventoryItem, useListResources, getListResourcesQueryKey,
   useCreateResource, useUpdateResource, useListRequestAssignments,
   getListRequestAssignmentsQueryKey, useCreateResourceAssignment, useCancelResourceAssignment,
-  useAgentChat, useListContactChannels, getListContactChannelsQueryKey, useListPublicContactChannels,
+  useAgentChat, usePublicAgentChat, useListContactChannels, getListContactChannelsQueryKey, useListPublicContactChannels,
   getListPublicContactChannelsQueryKey,
   useCreateContactChannel, useUpdateContactChannel,
 } from "@workspace/api-client-react";
@@ -181,6 +181,8 @@ function PublicHome() {
       </div>
     </section>
 
+    <PublicAgentBox />
+
     <section className="public-cta">
       <div><p className="public-eyebrow">ESTAMOS PARA ORIENTARTE</p>
         <h2>Podemos comenzar por escucharte.</h2>
@@ -263,6 +265,59 @@ function PublicRequestLookup() {
       </div>}
     </section>
   </main>;
+}
+
+
+function PublicAgentBox() {
+  const chat = usePublicAgentChat();
+  const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+
+  const ask = (text: string) => {
+    const content = text.trim();
+    if (!content || chat.isPending) return;
+
+    const next = [...messages, { role: "user" as const, content }];
+    setMessages(next);
+    setInput("");
+    setError("");
+
+    chat.mutate({ data: { messages: next.slice(-8) } }, {
+      onSuccess: (result) => setMessages([...next, { role: "assistant", content: result.reply }]),
+      onError: (requestError) => setError(getErrorMessage(requestError, "El asistente no está disponible ahora. Puedes enviar tu solicitud desde el formulario.")),
+    });
+  };
+
+  return <section className="public-section" id="asistente">
+    <div className="public-section-heading" style={{ display: "block" }}>
+      <p className="public-eyebrow">ORIENTACIÓN INMEDIATA</p>
+      <h2>Pregúntale a Serena</h2>
+      <p>Un asistente que conoce el catálogo y puede registrar tu solicitud. Si no sabe algo, te lo dice y te pasa con una persona.</p>
+    </div>
+
+    <div style={{ maxWidth: 620, marginTop: 16 }}>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {["¿Qué servicios ofrecen?", "Quiero solicitar un servicio", "Quiero hablar con una persona"].map((suggestion) => <button key={suggestion} type="button" className="public-secondary-link" style={{ background: "none", border: "1px solid var(--line)", padding: "8px 10px" }} onClick={() => ask(suggestion)}>{suggestion}</button>)}
+      </div>
+
+      {messages.length > 0 && <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
+        {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "92%", padding: "10px 12px", fontSize: 13, whiteSpace: "pre-wrap", borderRadius: 10, background: message.role === "user" ? "var(--green-deep)" : "var(--card)", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line)" }}>{message.content}</div>)}
+        {chat.isPending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Serena está escribiendo…</div>}
+      </div>}
+
+      {error && <div className="public-feedback" role="alert">{error}</div>}
+
+      <form onSubmit={(event) => { event.preventDefault(); ask(input); }} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <div className="field" style={{ flex: 1, minWidth: 200, margin: 0 }}>
+          <label htmlFor="public-agent-input">Tu pregunta</label>
+          <input id="public-agent-input" value={input} maxLength={600} onChange={(event) => setInput(event.target.value)} placeholder="Escribe tu consulta" />
+        </div>
+        <button className="public-primary-link" type="submit" disabled={chat.isPending || input.trim().length === 0}>{chat.isPending ? "Enviando…" : "Preguntar"}</button>
+      </form>
+      <p style={{ fontSize: 10, color: "var(--muted)", marginTop: 10 }}>Asistente con datos de demostración. No confirma servicios ni reemplaza la atención del equipo.</p>
+    </div>
+  </section>;
 }
 
 function SignIn({ session }: { session: AuthenticatedSession | undefined }) {

@@ -13,8 +13,9 @@ import {
 import { createServiceRequestRecord } from "../service-request-creation";
 
 export interface AgentContext {
-  userId: string;
+  userId: string | null;
   role: string;
+  scope: "staff" | "public";
 }
 
 export type ToolOutcome =
@@ -27,6 +28,7 @@ export type ToolOutcome =
  * puede ejecutar SQL propio.
  */
 export const AGENT_TOOL_NAMES = [
+  "consultar_servicios",
   "consultar_disponibilidad",
   "verificar_poliza_demo",
   "consultar_solicitud",
@@ -37,6 +39,15 @@ export const AGENT_TOOL_NAMES = [
 export type AgentToolName = (typeof AGENT_TOOL_NAMES)[number];
 
 export const AGENT_TOOL_DEFINITIONS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "consultar_servicios",
+      description:
+        "Lista los servicios activos del catálogo con su descripción. Usa esta herramienta cuando pregunten qué servicios ofrece la funeraria.",
+      parameters: { type: "object", additionalProperties: false, properties: {} },
+    },
+  },
   {
     type: "function" as const,
     function: {
@@ -133,6 +144,25 @@ export const AGENT_TOOL_DEFINITIONS = [
     },
   },
 ];
+
+async function consultarServicios(): Promise<ToolOutcome> {
+  const rows = await db
+    .select({
+      name: serviceOfferingsTable.name,
+      description: serviceOfferingsTable.description,
+    })
+    .from(serviceOfferingsTable)
+    .where(eq(serviceOfferingsTable.isActive, true));
+
+  return {
+    ok: true,
+    data: {
+      servicios: rows,
+      aclaracion:
+        "Un servicio disponible en el catálogo no implica que la solicitud esté confirmada.",
+    },
+  };
+}
 
 const availabilityArgs = z.object({
   inicio: z.string().min(4),
@@ -417,12 +447,34 @@ async function contactoSoporte(): Promise<ToolOutcome> {
   };
 }
 
+const PUBLIC_TOOLS = new Set([
+  "consultar_servicios",
+  "verificar_poliza_demo",
+  "crear_solicitud",
+  "contacto_soporte",
+]);
+
+export function isToolAllowed(name: string, scope: AgentContext["scope"]): boolean {
+  if (scope === "staff") return (AGENT_TOOL_NAMES as readonly string[]).includes(name);
+  return PUBLIC_TOOLS.has(name);
+}
+
 export async function executeTool(
   name: string,
   args: unknown,
-  _context: AgentContext,
+  context: AgentContext,
 ): Promise<ToolOutcome> {
+  if (!isToolAllowed(name, context.scope)) {
+    return {
+      ok: false,
+      errorCode: "herramienta_no_autorizada",
+      message: "Esa consulta no está disponible en este canal.",
+    };
+  }
+
   switch (name) {
+    case "consultar_servicios":
+      return consultarServicios();
     case "consultar_disponibilidad":
       return consultarDisponibilidad(args);
     case "verificar_poliza_demo":
