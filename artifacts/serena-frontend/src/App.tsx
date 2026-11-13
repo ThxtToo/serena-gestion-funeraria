@@ -4,7 +4,7 @@ import { Link, Redirect, Route, Switch, useLocation } from "wouter";
 import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
-  BookOpen, Plus, Pencil, Power, Send, CalendarDays, ClipboardList,
+  BookOpen, Plus, Pencil, Power, Send, CalendarDays, ClipboardList, Package, Warehouse,
 } from "lucide-react";
 import {
   getGetAuthSessionQueryKey, getListEmployeesQueryKey,
@@ -15,10 +15,16 @@ import {
   useCreateServiceRequest, useListServiceRequests, useGetServiceRequestDetail,
   useUpdateServiceRequestStatus, getListServiceRequestsQueryKey,
   getGetServiceRequestDetailQueryKey,
+  useListInventoryItems, getListInventoryItemsQueryKey, useCreateInventoryItem,
+  useListInventoryMovements, getListInventoryMovementsQueryKey, useCreateInventoryMovement,
+  useUpdateInventoryItem, useListResources, getListResourcesQueryKey,
+  useCreateResource, useUpdateResource, useListRequestAssignments,
+  getListRequestAssignmentsQueryKey, useCreateResourceAssignment, useCancelResourceAssignment,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
   ServiceOffering, ServiceRequestCreated, ServiceRequestSummary,
+  InventoryItem, Resource,
 } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
@@ -212,6 +218,8 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
         <div className="nav-label">Espacio de trabajo</div>
         <Link href="/app" className={`side-link ${location === "/app" ? "active" : ""}`} data-testid="link-workspace-home"><UserRound size={16} /><span>Inicio</span></Link>
         <Link href="/app/solicitudes" className={`side-link ${location === "/app/solicitudes" ? "active" : ""}`} data-testid="link-staff-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
+        <Link href="/app/inventario" className={`side-link ${location === "/app/inventario" ? "active" : ""}`} data-testid="link-inventory"><Package size={16} /><span>Inventario</span></Link>
+        <Link href="/app/recursos" className={`side-link ${location === "/app/recursos" ? "active" : ""}`} data-testid="link-resources"><Warehouse size={16} /><span>Recursos</span></Link>
         {isAdmin && <>
           <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
           <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
@@ -841,6 +849,8 @@ function ServiceRequestDetailPanel({
       </div>
     </div>}
 
+    <RequestAssignmentsPanel serviceRequestId={serviceRequest.id} suggestedDate={serviceRequest.requestedDate} />
+
     <h2 className="section-title" style={{ marginTop: 22 }}>Historial de estados</h2>
     <ol style={{ listStyle: "none", padding: 0, margin: "12px 0 6px", display: "grid", gap: 12 }}>
       {history.map((entry) => <li key={entry.id} style={{ borderLeft: "2px solid var(--line, #dcd8cf)", paddingLeft: 12 }}>
@@ -927,6 +937,384 @@ function StaffServiceRequests({ session }: { session: AuthenticatedSession }) {
   </WorkspaceShell>;
 }
 
+
+const INVENTORY_MOVEMENT_LABELS: Record<"entrada" | "salida" | "ajuste", string> = {
+  entrada: "Entrada",
+  salida: "Salida",
+  ajuste: "Ajuste",
+};
+
+const RESOURCE_TYPE_LABELS: Record<Resource["type"], string> = {
+  sala: "Sala",
+  vehiculo: "Vehículo",
+  equipo: "Equipo",
+  otro: "Otro",
+};
+
+const RESOURCE_STATUS_LABELS: Record<Resource["status"], string> = {
+  disponible: "Disponible",
+  mantenimiento: "En mantenimiento",
+  fuera_de_servicio: "Fuera de servicio",
+};
+
+function toLocalInputValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function NewInventoryItemModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createItem = useCreateInventoryItem();
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [unit, setUnit] = useState("unidad");
+  const [minimumQuantity, setMinimumQuantity] = useState("0");
+  const [initialQuantity, setInitialQuantity] = useState("0");
+  const [error, setError] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    createItem.mutate(
+      {
+        data: {
+          name: name.trim(),
+          category: category.trim(),
+          unit: unit.trim(),
+          minimumQuantity: Number(minimumQuantity) || 0,
+          initialQuantity: Number(initialQuantity) || 0,
+        },
+      },
+      {
+        onSuccess: onCreated,
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos crear el artículo.")),
+      },
+    );
+  };
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createItem.isPending) onClose(); }}>
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="new-item-title">
+      <div className="modal-head"><div><h2 id="new-item-title">Nuevo artículo</h2><p>La existencia inicial queda registrada como una entrada en el historial.</p></div><button className="icon-button" type="button" aria-label="Cerrar" onClick={onClose}><span aria-hidden="true">×</span></button></div>
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="field"><label htmlFor="item-name">Nombre</label><input id="item-name" required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Cofre de madera" /></div>
+        <div className="field"><label htmlFor="item-category">Categoría</label><input id="item-category" required minLength={2} maxLength={60} value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Cofres" /></div>
+        <div className="field"><label htmlFor="item-unit">Unidad de medida</label><input id="item-unit" required maxLength={30} value={unit} onChange={(event) => setUnit(event.target.value)} placeholder="unidad" /></div>
+        <div className="field"><label htmlFor="item-minimum">Mínimo de referencia</label><input id="item-minimum" type="number" min={0} max={100000} value={minimumQuantity} onChange={(event) => setMinimumQuantity(event.target.value)} /></div>
+        <div className="field"><label htmlFor="item-initial">Existencia inicial</label><input id="item-initial" type="number" min={0} max={100000} value={initialQuantity} onChange={(event) => setInitialQuantity(event.target.value)} /></div>
+        <div className="modal-actions"><button className="quiet-btn" type="button" onClick={onClose} disabled={createItem.isPending}>Cancelar</button><button className="secondary-btn" type="submit" disabled={createItem.isPending}>{createItem.isPending ? "Guardando…" : "Crear artículo"}</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+function InventoryMovementsPanel({ item, canAdjust, onClose }: { item: InventoryItem; canAdjust: boolean; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const movementsQuery = useListInventoryMovements(item.id, { query: { queryKey: getListInventoryMovementsQueryKey(item.id) } });
+  const createMovement = useCreateInventoryMovement();
+  const [type, setType] = useState<"entrada" | "salida" | "ajuste">("entrada");
+  const [quantity, setQuantity] = useState("1");
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    createMovement.mutate(
+      { inventoryItemId: item.id, data: { type, quantity: Number(quantity) || 0, ...(reason.trim() ? { reason: reason.trim() } : {}) } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListInventoryItemsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListInventoryMovementsQueryKey(item.id) });
+          setNotice("Movimiento registrado.");
+          setReason("");
+          setQuantity("1");
+        },
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos registrar el movimiento.")),
+      },
+    );
+  };
+
+  return <div className="table-wrap" style={{ marginTop: 18 }} data-testid="panel-inventory-movements">
+    <div className="admin-actions" style={{ marginBottom: 10 }}>
+      <div><h2 className="section-title">{item.name}</h2><span style={{ color: "var(--muted)", fontSize: 11 }}>{item.quantity} {item.unit} disponibles · mínimo {item.minimumQuantity}</span></div>
+      <button className="quiet-btn" type="button" onClick={onClose}>Cerrar</button>
+    </div>
+
+    <form onSubmit={submit}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 12 }}>
+        <div className="field"><label htmlFor="movement-type">Tipo</label><select id="movement-type" value={type} onChange={(event) => setType(event.target.value as "entrada" | "salida" | "ajuste")}>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          {canAdjust && <option value="ajuste">Ajuste por conteo</option>}
+        </select></div>
+        <div className="field"><label htmlFor="movement-quantity">{type === "ajuste" ? "Existencia contada" : "Cantidad"}</label><input id="movement-quantity" type="number" min={type === "ajuste" ? 0 : 1} max={100000} value={quantity} onChange={(event) => setQuantity(event.target.value)} required /></div>
+      </div>
+      <div className="field"><label htmlFor="movement-reason">Motivo {type === "ajuste" ? "(obligatorio)" : "(opcional)"}</label><input id="movement-reason" maxLength={300} value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Uso en servicio, conteo físico, compra…" /></div>
+      {notice && <div className="success-banner" role="status"><CheckCircle2 size={17} /><span>{notice}</span></div>}
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+      <div className="modal-actions"><button className="secondary-btn" type="submit" disabled={createMovement.isPending}>{createMovement.isPending ? "Registrando…" : "Registrar movimiento"}</button></div>
+    </form>
+
+    <h3 className="section-title" style={{ marginTop: 18 }}>Movimientos</h3>
+    {movementsQuery.isLoading ? <div className="loading-state">Cargando movimientos…</div>
+    : (movementsQuery.data?.movements.length ?? 0) === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Sin movimientos registrados.</p>
+    : <table className="employee-table">
+        <thead><tr><th>Tipo</th><th>Cantidad</th><th>Antes</th><th>Después</th><th>Motivo</th><th>Fecha</th></tr></thead>
+        <tbody>
+          {movementsQuery.data?.movements.map((movement) => <tr key={movement.id}>
+            <td>{INVENTORY_MOVEMENT_LABELS[movement.type]}</td>
+            <td>{movement.quantity}</td>
+            <td>{movement.previousQuantity}</td>
+            <td>{movement.newQuantity}</td>
+            <td>{movement.reason ?? "—"}</td>
+            <td>{formatDateTime(movement.createdAt)}</td>
+          </tr>)}
+        </tbody>
+      </table>}
+  </div>;
+}
+
+function InventoryPage({ session }: { session: AuthenticatedSession }) {
+  const queryClient = useQueryClient();
+  const itemsQuery = useListInventoryItems({ query: { queryKey: getListInventoryItemsQueryKey() } });
+  const updateItem = useUpdateInventoryItem();
+  const [creating, setCreating] = useState(false);
+  const [selected, setSelected] = useState<InventoryItem | null>(null);
+  const [error, setError] = useState("");
+  const canManage = session.user.role === "administrador";
+  const items = itemsQuery.data?.items ?? [];
+  const lowStock = items.filter((item) => item.lowStock && item.isActive).length;
+
+  const toggleActive = (item: InventoryItem) => {
+    setError("");
+    updateItem.mutate({ inventoryItemId: item.id, data: { isActive: !item.isActive } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInventoryItemsQueryKey() }),
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos actualizar el artículo.")),
+    });
+  };
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">OPERACIÓN</p>
+      <h1 className="page-title">Inventario.</h1>
+      <p className="page-subtitle">Artículos que se controlan por cantidad. Cada entrada, salida o ajuste queda en el historial del artículo.</p>
+
+      <div className="admin-actions">
+        <span className="catalog-count">{items.length} {items.length === 1 ? "artículo" : "artículos"}{lowStock > 0 ? ` · ${lowStock} con existencia baja` : ""}</span>
+        {canManage && <button className="secondary-btn" type="button" onClick={() => setCreating(true)}><Package size={15} /> Nuevo artículo</button>}
+      </div>
+
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+      {itemsQuery.isLoading ? <div className="table-wrap"><div className="loading-state">Cargando inventario…</div></div>
+      : itemsQuery.isError ? <div className="table-wrap error-state"><span className="state-symbol"><AlertCircle size={17} /></span><div><strong>No pudimos cargar el inventario.</strong><p>Comprueba tu sesión e inténtalo de nuevo.</p><button className="quiet-btn" style={{ marginTop: 15 }} type="button" onClick={() => itemsQuery.refetch()}><RefreshCw size={14} /> Reintentar</button></div></div>
+      : items.length === 0 ? <div className="table-wrap empty-state"><span className="state-symbol"><Package size={17} /></span><div><strong>El inventario está vacío</strong><p>Registra el primer artículo para empezar a controlar existencias.</p></div></div>
+      : <div className="table-wrap">
+          <table className="employee-table">
+            <thead><tr><th>Artículo</th><th>Existencia</th><th>Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {items.map((item) => <tr key={item.id}>
+                <td><div className="employee-name"><strong>{item.name}</strong><small>{item.category}</small></div></td>
+                <td>{item.quantity} {item.unit}</td>
+                <td>{item.minimumQuantity}</td>
+                <td style={{ display: "grid", gap: 5 }}>
+                  <span className={`pill ${item.isActive ? "active" : "inactive"}`}>{item.isActive ? "Activo" : "Inactivo"}</span>
+                  {item.isActive && item.lowStock && <span className="pill pending">Existencia baja</span>}
+                </td>
+                <td><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="table-action" type="button" onClick={() => setSelected(item)}>Movimientos</button>
+                  {canManage && <button className="table-action" type="button" disabled={updateItem.isPending} onClick={() => toggleActive(item)}>{item.isActive ? "Desactivar" : "Reactivar"}</button>}
+                </div></td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>}
+
+      {selected && <InventoryMovementsPanel item={selected} canAdjust={canManage} onClose={() => setSelected(null)} />}
+    </section>
+    {creating && <NewInventoryItemModal onClose={() => setCreating(false)} onCreated={() => {
+      setCreating(false);
+      queryClient.invalidateQueries({ queryKey: getListInventoryItemsQueryKey() });
+    }} />}
+  </WorkspaceShell>;
+}
+
+function NewResourceModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const createResource = useCreateResource();
+  const [name, setName] = useState("");
+  const [type, setType] = useState<Resource["type"]>("sala");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    createResource.mutate(
+      { data: { name: name.trim(), type, ...(description.trim() ? { description: description.trim() } : {}) } },
+      {
+        onSuccess: onCreated,
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos crear el recurso.")),
+      },
+    );
+  };
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createResource.isPending) onClose(); }}>
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="new-resource-title">
+      <div className="modal-head"><div><h2 id="new-resource-title">Nuevo recurso</h2><p>Salas, vehículos y equipos que se asignan a una solicitud.</p></div><button className="icon-button" type="button" aria-label="Cerrar" onClick={onClose}><span aria-hidden="true">×</span></button></div>
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="field"><label htmlFor="resource-name">Nombre</label><input id="resource-name" required minLength={2} maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Sala A" /></div>
+        <div className="field"><label htmlFor="resource-type">Tipo</label><select id="resource-type" value={type} onChange={(event) => setType(event.target.value as Resource["type"])}>
+          <option value="sala">Sala</option>
+          <option value="vehiculo">Vehículo</option>
+          <option value="equipo">Equipo</option>
+          <option value="otro">Otro</option>
+        </select></div>
+        <div className="field"><label htmlFor="resource-description">Descripción (opcional)</label><input id="resource-description" maxLength={500} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
+        <div className="modal-actions"><button className="quiet-btn" type="button" onClick={onClose} disabled={createResource.isPending}>Cancelar</button><button className="secondary-btn" type="submit" disabled={createResource.isPending}>{createResource.isPending ? "Guardando…" : "Crear recurso"}</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+function ResourcesPage({ session }: { session: AuthenticatedSession }) {
+  const queryClient = useQueryClient();
+  const resourcesQuery = useListResources(undefined, { query: { queryKey: getListResourcesQueryKey() } });
+  const updateResource = useUpdateResource();
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const canManage = session.user.role === "administrador";
+  const resources = resourcesQuery.data?.resources ?? [];
+
+  const changeStatus = (resource: Resource, status: Resource["status"]) => {
+    setError("");
+    updateResource.mutate({ resourceId: resource.id, data: { status } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListResourcesQueryKey() }),
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos actualizar el recurso.")),
+    });
+  };
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">OPERACIÓN</p>
+      <h1 className="page-title">Recursos.</h1>
+      <p className="page-subtitle">Salas, vehículos y equipos. Un recurso solo puede asignarse a una solicitud si está disponible y su período no se superpone con otra asignación.</p>
+
+      <div className="admin-actions">
+        <span className="catalog-count">{resources.length} {resources.length === 1 ? "recurso" : "recursos"} · {resources.filter((resource) => resource.status === "disponible").length} disponibles</span>
+        {canManage && <button className="secondary-btn" type="button" onClick={() => setCreating(true)}><Warehouse size={15} /> Nuevo recurso</button>}
+      </div>
+
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+      {resourcesQuery.isLoading ? <div className="table-wrap"><div className="loading-state">Cargando recursos…</div></div>
+      : resourcesQuery.isError ? <div className="table-wrap error-state"><span className="state-symbol"><AlertCircle size={17} /></span><div><strong>No pudimos cargar los recursos.</strong><p>Comprueba tu sesión e inténtalo de nuevo.</p></div></div>
+      : resources.length === 0 ? <div className="table-wrap empty-state"><span className="state-symbol"><Warehouse size={17} /></span><div><strong>No hay recursos registrados</strong><p>Registra una sala o un vehículo para poder asignarlo a una solicitud.</p></div></div>
+      : <div className="table-wrap">
+          <table className="employee-table">
+            <thead><tr><th>Recurso</th><th>Tipo</th><th>Estado</th><th>Disponible</th><th>Acción</th></tr></thead>
+            <tbody>
+              {resources.map((resource) => <tr key={resource.id}>
+                <td><div className="employee-name"><strong>{resource.name}</strong><small>{resource.description ?? "Sin descripción"}</small></div></td>
+                <td>{RESOURCE_TYPE_LABELS[resource.type]}</td>
+                <td>{RESOURCE_STATUS_LABELS[resource.status]}</td>
+                <td><span className={`pill ${resource.available ? "active" : "inactive"}`}>{resource.available ? "Sí" : "No"}</span></td>
+                <td>{canManage ? <select value={resource.status} onChange={(event) => changeStatus(resource, event.target.value as Resource["status"])} style={{ fontSize: 11 }}>
+                  <option value="disponible">Disponible</option>
+                  <option value="mantenimiento">Mantenimiento</option>
+                  <option value="fuera_de_servicio">Fuera de servicio</option>
+                </select> : RESOURCE_STATUS_LABELS[resource.status]}</td>
+              </tr>)}
+            </tbody>
+          </table>
+        </div>}
+    </section>
+    {creating && <NewResourceModal onClose={() => setCreating(false)} onCreated={() => {
+      setCreating(false);
+      queryClient.invalidateQueries({ queryKey: getListResourcesQueryKey() });
+    }} />}
+  </WorkspaceShell>;
+}
+
+function RequestAssignmentsPanel({ serviceRequestId, suggestedDate }: { serviceRequestId: string; suggestedDate?: string | null }) {
+  const queryClient = useQueryClient();
+  const assignmentsQuery = useListRequestAssignments(serviceRequestId, { query: { queryKey: getListRequestAssignmentsQueryKey(serviceRequestId) } });
+  const resourcesQuery = useListResources(undefined, { query: { queryKey: getListResourcesQueryKey() } });
+  const createAssignment = useCreateResourceAssignment();
+  const cancelAssignment = useCancelResourceAssignment();
+  const [resourceId, setResourceId] = useState("");
+  const suggestedStart = suggestedDate ? new Date(suggestedDate) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+  const [startAt, setStartAt] = useState(toLocalInputValue(suggestedStart));
+  const [endAt, setEndAt] = useState(toLocalInputValue(new Date(suggestedStart.getTime() + 4 * 60 * 60 * 1000)));
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const availableResources = (resourcesQuery.data?.resources ?? []).filter((resource) => resource.status === "disponible");
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: getListRequestAssignmentsQueryKey(serviceRequestId) });
+    queryClient.invalidateQueries({ queryKey: getListResourcesQueryKey() });
+  };
+
+  const assign = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+    if (!resourceId) {
+      setError("Selecciona un recurso.");
+      return;
+    }
+    createAssignment.mutate(
+      { serviceRequestId, data: { resourceId, startAt: new Date(startAt).toISOString(), endAt: new Date(endAt).toISOString() } },
+      {
+        onSuccess: () => { setNotice("Recurso asignado."); refresh(); },
+        onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos asignar el recurso.")),
+      },
+    );
+  };
+
+  const cancel = (assignmentId: string) => {
+    setError("");
+    setNotice("");
+    cancelAssignment.mutate({ assignmentId }, {
+      onSuccess: () => { setNotice("Asignación cancelada."); refresh(); },
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos cancelar la asignación.")),
+    });
+  };
+
+  const assignments = assignmentsQuery.data?.assignments ?? [];
+
+  return <div style={{ marginTop: 22 }}>
+    <h2 className="section-title">Recursos asignados</h2>
+    {assignments.length === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Todavía no hay recursos asignados a esta solicitud.</p>
+    : <ul style={{ listStyle: "none", padding: 0, margin: "10px 0", display: "grid", gap: 8 }}>
+        {assignments.map((assignment) => <li key={assignment.id} style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", fontSize: 12 }}>
+          <strong>{assignment.resourceName}</strong>
+          <span style={{ color: "var(--muted)" }}>{formatDateTime(assignment.startAt)} → {formatDateTime(assignment.endAt)}</span>
+          <span className={`pill ${assignment.status === "activa" ? "active" : "inactive"}`}>{assignment.status === "activa" ? "Activa" : assignment.status === "cancelada" ? "Cancelada" : "Finalizada"}</span>
+          {assignment.status === "activa" && <button className="table-action" type="button" disabled={cancelAssignment.isPending} onClick={() => cancel(assignment.id)}>Cancelar</button>}
+        </li>)}
+      </ul>}
+
+    {notice && <div className="success-banner" role="status"><CheckCircle2 size={17} /><span>{notice}</span></div>}
+    {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+    <form onSubmit={assign} style={{ marginTop: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+        <div className="field"><label htmlFor="assignment-resource">Recurso</label><select id="assignment-resource" value={resourceId} onChange={(event) => setResourceId(event.target.value)}>
+          <option value="">Selecciona un recurso</option>
+          {availableResources.map((resource) => <option key={resource.id} value={resource.id}>{resource.name}</option>)}
+        </select></div>
+        <div className="field"><label htmlFor="assignment-start">Desde</label><input id="assignment-start" type="datetime-local" value={startAt} onChange={(event) => setStartAt(event.target.value)} required /></div>
+        <div className="field"><label htmlFor="assignment-end">Hasta</label><input id="assignment-end" type="datetime-local" value={endAt} onChange={(event) => setEndAt(event.target.value)} required /></div>
+      </div>
+      <button className="secondary-btn" type="submit" disabled={createAssignment.isPending} style={{ marginTop: 8 }}>{createAssignment.isPending ? "Asignando…" : "Asignar recurso"}</button>
+    </form>
+  </div>;
+}
+
 function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
@@ -955,6 +1343,8 @@ function AppRoutes() {
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/app/inventario">{session ? <ProtectedRoute session={session}><InventoryPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/app/recursos">{session ? <ProtectedRoute session={session}><ResourcesPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />
