@@ -571,7 +571,13 @@ export const ListServiceRequestsStatus = {
 } as const;
 
 export type ListResourcesParams = {
+/**
+ * Inicio del período en formato ISO 8601.
+ */
 startAt?: string;
+/**
+ * Fin del período en formato ISO 8601.
+ */
 endAt?: string;
 };
 

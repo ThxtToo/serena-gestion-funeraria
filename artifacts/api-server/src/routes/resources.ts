@@ -111,9 +111,19 @@ router.get("/admin/resources", requireAuth(), async (req, res) => {
     return;
   }
 
-  const { startAt, endAt } = parsed.data;
+  const startAt = parsed.data.startAt ? new Date(parsed.data.startAt) : undefined;
+  const endAt = parsed.data.endAt ? new Date(parsed.data.endAt) : undefined;
 
-  if ((startAt && !endAt) || (!startAt && endAt) || (startAt && endAt && startAt >= endAt)) {
+  const validStart = startAt && !Number.isNaN(startAt.getTime());
+  const validEnd = endAt && !Number.isNaN(endAt.getTime());
+
+  if (
+    (startAt && !validStart) ||
+    (endAt && !validEnd) ||
+    (startAt && !endAt) ||
+    (!startAt && endAt) ||
+    (validStart && validEnd && startAt >= endAt)
+  ) {
     const error: ApiError = {
       error: "Indica un período válido: inicio anterior al fin.",
     };
@@ -127,7 +137,10 @@ router.get("/admin/resources", requireAuth(), async (req, res) => {
       .from(resourcesTable)
       .orderBy(asc(resourcesTable.name));
 
-    const busy = startAt && endAt ? await busyResourceIds(startAt, endAt) : new Set<string>();
+    const busy =
+      validStart && validEnd
+        ? await busyResourceIds(startAt, endAt)
+        : new Set<string>();
 
     const response = ListResourcesResponse.parse({
       resources: rows.map((row) => withAvailability(row, busy.has(row.id))),

@@ -7,6 +7,12 @@
  */
 
 export type ListResourcesParams = {
-startAt?: Date;
-endAt?: Date;
+/**
+ * Inicio del período en formato ISO 8601.
+ */
+startAt?: string;
+/**
+ * Fin del período en formato ISO 8601.
+ */
+endAt?: string;
 };

@@ -875,15 +875,15 @@ paths:
         - name: startAt
           in: query
           required: false
+          description: Inicio del período en formato ISO 8601.
           schema:
             type: string
-            format: date-time
         - name: endAt
           in: query
           required: false
+          description: Fin del período en formato ISO 8601.
           schema:
             type: string
-            format: date-time
       responses:
         "200":
           description: Resources

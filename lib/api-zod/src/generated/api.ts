@@ -600,8 +600,8 @@ export const CreateInventoryMovementResponse = zod.object({
  * @summary List operational resources
  */
 export const ListResourcesQueryParams = zod.object({
-  "startAt": zod.date().optional(),
-  "endAt": zod.date().optional()
+  "startAt": zod.coerce.string().optional().describe('Inicio del período en formato ISO 8601.'),
+  "endAt": zod.coerce.string().optional().describe('Fin del período en formato ISO 8601.')
 })
 
 export const ListResourcesResponse = zod.object({
