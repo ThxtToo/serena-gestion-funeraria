@@ -503,7 +503,15 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
       </div>
     </aside>
     <main className="main-area">
-      <header className="topbar"><span className="topbar-label">Serena / Personal</span><span className="topbar-date">ÁREA PRIVADA · ACCESO SEGURO</span></header>
+      <header className="topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+        <span className="topbar-label">Serena / Personal</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+          {location !== "/app" && <Link href="/app" className="quiet-btn" data-testid="link-back-home"><ArrowRight size={14} style={{ transform: "rotate(180deg)" }} /> Inicio</Link>}
+          <button className="quiet-btn" type="button" onClick={signOut} disabled={logout.isPending} data-testid="button-logout-topbar">
+            {logout.isPending ? <RefreshCw size={14} /> : <DoorOpen size={14} />} {logout.isPending ? "Saliendo…" : "Salir"}
+          </button>
+        </div>
+      </header>
       {logoutError && <div className="page-inline-error" role="alert" data-testid="status-logout-error">{logoutError}</div>}
       {children}
     </main>
