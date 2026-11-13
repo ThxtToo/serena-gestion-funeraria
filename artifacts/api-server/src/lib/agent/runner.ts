@@ -112,7 +112,10 @@ export async function runAgent(
     });
 
     if (!response.ok) {
-      throw new Error(`Groq respondió con estado ${response.status}`);
+      const detail = await response.text().catch(() => "");
+      throw new Error(
+        `Groq respondió ${response.status} para el modelo "${model}" en ${baseUrl}: ${detail.slice(0, 300)}`,
+      );
     }
 
     const payload = (await response.json()) as {
