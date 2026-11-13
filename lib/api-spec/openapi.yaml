@@ -31,6 +31,8 @@ tags:
     description: Serena assistant restricted to backend tools
   - name: contact-channels
     description: Human support channels used by the assistant
+  - name: public
+    description: Information anyone can see without signing in
 
 paths:
   /healthz:
@@ -1410,6 +1412,26 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "404":
           description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /public/contact-channels:
+    get:
+      operationId: listPublicContactChannels
+      tags: [public]
+      summary: List active human support channels
+      security: []
+      responses:
+        "200":
+          description: Active channels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactChannelList"
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:

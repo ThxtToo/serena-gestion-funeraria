@@ -21,7 +21,8 @@ import {
   useUpdateInventoryItem, useListResources, getListResourcesQueryKey,
   useCreateResource, useUpdateResource, useListRequestAssignments,
   getListRequestAssignmentsQueryKey, useCreateResourceAssignment, useCancelResourceAssignment,
-  useAgentChat, useListContactChannels, getListContactChannelsQueryKey,
+  useAgentChat, useListContactChannels, getListContactChannelsQueryKey, useListPublicContactChannels,
+  getListPublicContactChannelsQueryKey,
   useCreateContactChannel, useUpdateContactChannel,
 } from "@workspace/api-client-react";
 import type {
@@ -80,6 +81,54 @@ function AuthLoading() {
       <div className="skeleton" style={{ width: "100%", height: 46, marginTop: 33 }} />
       <div className="skeleton" style={{ width: "100%", height: 46, marginTop: 18 }} />
     </div></main>
+  </div>;
+}
+
+
+function PublicHome() {
+  const offeringsQuery = useListPublicServiceOfferings();
+  const channelsQuery = useListPublicContactChannels({ query: { queryKey: getListPublicContactChannelsQueryKey() } });
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+  const channels = channelsQuery.data?.channels ?? [];
+
+  return <div className="public-request-layout">
+    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "18px 20px" }}>
+      <Brand />
+      <Link href="/ingresar" className="quiet-btn" data-testid="link-staff-login"><LockKeyhole size={14} /> Acceso del personal</Link>
+    </header>
+
+    <main className="public-request-main">
+      <p className="page-kicker">FUNERARIA SERENA</p>
+      <h1 className="page-title">Acompañamos a la familia en el momento más difícil.</h1>
+      <p className="page-subtitle">Organizamos el servicio con claridad y respeto: velación, traslado, sala y acompañamiento. Si necesitas orientación ahora, envíanos una solicitud y el equipo te contacta.</p>
+
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "18px 0 26px" }}>
+        <Link href="/solicitar-servicio" className="primary-btn" style={{ width: "auto", textDecoration: "none" }} data-testid="link-request-service"><Send size={15} /> Solicitar un servicio</Link>
+      </div>
+
+      <h2 className="section-title">Servicios</h2>
+      {offeringsQuery.isLoading ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Cargando servicios…</p>
+      : offerings.length === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>El catálogo estará disponible en breve.</p>
+      : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 10 }}>
+          {offerings.map((offering) => <div key={offering.id} className="public-request-card" style={{ padding: 14 }}>
+            <strong style={{ fontSize: 13 }}>{offering.name}</strong>
+            <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0" }}>{offering.description ?? "Consulta los detalles con el equipo."}</p>
+          </div>)}
+        </div>}
+
+      <h2 className="section-title" style={{ marginTop: 26 }}>Atención humana</h2>
+      {channels.length === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Los canales de contacto se publicarán pronto. Puedes enviar una solicitud desde el formulario.</p>
+      : <ul style={{ listStyle: "none", padding: 0, margin: "10px 0", display: "grid", gap: 6 }}>
+          {channels.map((channel) => <li key={channel.id} style={{ fontSize: 12 }}>
+            <strong>{channel.label ?? "Contacto"}: </strong>{channel.value}
+          </li>)}
+        </ul>}
+    </main>
+
+    <footer className="public-request-footer" style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+      <span>SERENA · Gestión funeraria</span>
+      <span style={{ opacity: 0.7 }}>Demostración académica con datos ficticios</span>
+    </footer>
   </div>;
 }
 
@@ -1481,15 +1530,16 @@ function AppRoutes() {
     </section></main></div>;
   }
   return <Switch>
-    <Route path="/"><SignIn session={session} /></Route>
-    <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
-    <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/app/inventario">{session ? <ProtectedRoute session={session}><InventoryPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/app/recursos">{session ? <ProtectedRoute session={session}><ResourcesPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/app/asistente">{session ? <ProtectedRoute session={session}><AgentChatPage session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
-    <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/">{session ? <Redirect to="/app" /> : <PublicHome />}</Route>
+    <Route path="/ingresar"><SignIn session={session} /></Route>
+    <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/app/inventario">{session ? <ProtectedRoute session={session}><InventoryPage session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/app/recursos">{session ? <ProtectedRoute session={session}><ResourcesPage session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/app/asistente">{session ? <ProtectedRoute session={session}><AgentChatPage session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
+    <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
     <Route component={NotFound} />
   </Switch>;
 }

@@ -912,3 +912,17 @@ export const UpdateContactChannelResponse = zod.object({
 })
 
 
+/**
+ * @summary List active human support channels
+ */
+export const ListPublicContactChannelsResponse = zod.object({
+  "channels": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['telefono', 'correo', 'whatsapp', 'otro']),
+  "value": zod.string(),
+  "label": zod.string().nullish(),
+  "isActive": zod.boolean()
+}))
+})
+
+

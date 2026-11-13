@@ -3307,3 +3307,104 @@ export const useUpdateContactChannel = <TError = ErrorType<ApiError>,
       return useMutation(getUpdateContactChannelMutationOptions(options), queryClient);
     }
 
+export const getListPublicContactChannelsUrl = () => {
+
+
+
+
+  return `/api/public/contact-channels`
+}
+
+/**
+ * @summary List active human support channels
+ */
+export const listPublicContactChannels = async ( options?: Parameters<typeof customFetch>[1]): Promise<ContactChannelList> => {
+
+  return customFetch<ContactChannelList>(getListPublicContactChannelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPublicContactChannelsQueryKey = () => {
+    return [
+    `/api/public/contact-channels`
+    ] as const;
+    }
+
+
+export const getListPublicContactChannelsQueryOptions = <TData = Awaited<ReturnType<typeof listPublicContactChannels>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPublicContactChannelsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublicContactChannels>>> = ({ signal }) => listPublicContactChannels({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListPublicContactChannelsQueryResult = NonNullable<Awaited<ReturnType<typeof listPublicContactChannels>>>
+export type ListPublicContactChannelsQueryError = ErrorType<ApiError>
+
+
+export function useListPublicContactChannels<TData = Awaited<ReturnType<typeof listPublicContactChannels>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublicContactChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listPublicContactChannels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublicContactChannels<TData = Awaited<ReturnType<typeof listPublicContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublicContactChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listPublicContactChannels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListPublicContactChannels<TData = Awaited<ReturnType<typeof listPublicContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List active human support channels
+ */
+
+export function useListPublicContactChannels<TData = Awaited<ReturnType<typeof listPublicContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listPublicContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListPublicContactChannelsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+

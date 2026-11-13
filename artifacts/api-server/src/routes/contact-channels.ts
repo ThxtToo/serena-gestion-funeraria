@@ -10,6 +10,7 @@ import {
   UpdateContactChannelParams,
   UpdateContactChannelResponse,
   ListContactChannelsResponse,
+  ListPublicContactChannelsResponse,
 } from "@workspace/api-zod";
 import { contactChannelsTable, db } from "@workspace/db";
 import { requireAdministrator, requireAuth } from "../middlewares/auth";
@@ -23,6 +24,21 @@ export const channelColumns = {
   label: contactChannelsTable.label,
   isActive: contactChannelsTable.isActive,
 };
+
+router.get("/public/contact-channels", async (req, res) => {
+  try {
+    const channels = await db
+      .select({ id: contactChannelsTable.id, type: contactChannelsTable.type, value: contactChannelsTable.value, label: contactChannelsTable.label, isActive: contactChannelsTable.isActive })
+      .from(contactChannelsTable)
+      .where(eq(contactChannelsTable.isActive, true));
+
+    res.status(200).json(ListPublicContactChannelsResponse.parse({ channels }));
+  } catch (error) {
+    req.log?.error({ err: error }, "Error al listar canales públicos");
+    const response: ApiError = { error: "No fue posible obtener los canales." };
+    res.status(500).json(response);
+  }
+});
 
 router.get("/admin/contact-channels", requireAuth(), async (req, res) => {
   try {
