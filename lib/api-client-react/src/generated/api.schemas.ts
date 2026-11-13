@@ -107,6 +107,95 @@ export interface AdminServiceRequestDetail {
   history: ServiceRequestStatusHistoryEntry[];
 }
 
+export type FuneralCaseStatusValue = typeof FuneralCaseStatusValue[keyof typeof FuneralCaseStatusValue];
+
+
+export const FuneralCaseStatusValue = {
+  abierto: 'abierto',
+  en_preparacion: 'en_preparacion',
+  programado: 'programado',
+  en_ejecucion: 'en_ejecucion',
+  finalizado: 'finalizado',
+  cancelado: 'cancelado',
+} as const;
+
+export interface CreateFuneralCaseInput {
+  serviceRequestId: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     */
+  deceasedFullName: string;
+  deceasedDateOfDeath?: string;
+  /** @maxLength 240 */
+  serviceLocation?: string;
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  responsibleContactName: string;
+  /**
+     * @minLength 5
+     * @maxLength 30
+     */
+  responsibleContactPhone: string;
+  assignedEmployeeId?: string;
+  /** @maxLength 2000 */
+  notes?: string;
+}
+
+export interface UpdateFuneralCaseStatusInput {
+  status: FuneralCaseStatusValue;
+  /** @maxLength 1000 */
+  observation?: string;
+}
+
+export interface AdminFuneralCase {
+  id: string;
+  caseNumber: string;
+  serviceRequestId: string;
+  serviceRequestReferenceCode: string;
+  deceasedFullName: string;
+  deceasedDateOfDeath: string | null;
+  serviceLocation: string | null;
+  responsibleContactName: string;
+  responsibleContactPhone: string;
+  assignedEmployeeId: string | null;
+  assignedEmployeeName: string | null;
+  status: FuneralCaseStatusValue;
+  notes: string | null;
+  createdByUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FuneralCaseStatusHistoryEntry {
+  id: string;
+  previousStatus: FuneralCaseStatusValue | null;
+  newStatus: FuneralCaseStatusValue;
+  changedByUserId: string;
+  changedByName: string;
+  observation: string | null;
+  createdAt: string;
+}
+
+export type AdminFuneralCaseListPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+};
+
+export interface AdminFuneralCaseList {
+  funeralCases: AdminFuneralCase[];
+  pagination: AdminFuneralCaseListPagination;
+}
+
+export interface AdminFuneralCaseDetail {
+  funeralCase: AdminFuneralCase;
+  history: FuneralCaseStatusHistoryEntry[];
+}
+
 export type AuthenticatedUserRole = typeof AuthenticatedUserRole[keyof typeof AuthenticatedUserRole];
 
 
@@ -253,6 +342,41 @@ export interface ServiceOfferingResponse {
 export interface ApiError {
   error: string;
 }
+
+export type ListAdminFuneralCasesParams = {
+status?: FuneralCaseStatusValue;
+/**
+ * @maxLength 120
+ */
+search?: string;
+assignedEmployeeId?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
+export type ListEmployeeFuneralCasesParams = {
+status?: FuneralCaseStatusValue;
+/**
+ * @maxLength 120
+ */
+search?: string;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
 
 export type ListAdminServiceRequestsParams = {
 status?: ServiceRequestStatusValue;

@@ -65,6 +65,335 @@ export const GetServiceRequestResponse = zod.object({
 
 
 /**
+ * @summary List funeral cases for administrators
+ */
+export const listAdminFuneralCasesQuerySearchMax = 120;
+
+export const listAdminFuneralCasesQueryPageDefault = 1;
+
+export const listAdminFuneralCasesQueryLimitDefault = 20;
+export const listAdminFuneralCasesQueryLimitMax = 100;
+
+
+
+export const ListAdminFuneralCasesQueryParams = zod.object({
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']).optional(),
+  "search": zod.coerce.string().max(listAdminFuneralCasesQuerySearchMax).optional(),
+  "assignedEmployeeId": zod.coerce.string().uuid().optional(),
+  "page": zod.coerce.number().int().min(1).default(listAdminFuneralCasesQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listAdminFuneralCasesQueryLimitMax).default(listAdminFuneralCasesQueryLimitDefault)
+})
+
+export const ListAdminFuneralCasesResponse = zod.object({
+  "funeralCases": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int()
+})
+})
+
+
+/**
+ * Creates at most one funeral case per confirmed service request and records its initial status history.
+ * @summary Create a funeral case from a confirmed service request
+ */
+export const createAdminFuneralCaseBodyDeceasedFullNameMin = 2;
+export const createAdminFuneralCaseBodyDeceasedFullNameMax = 160;
+
+export const createAdminFuneralCaseBodyServiceLocationMax = 240;
+
+export const createAdminFuneralCaseBodyResponsibleContactNameMin = 2;
+export const createAdminFuneralCaseBodyResponsibleContactNameMax = 120;
+
+export const createAdminFuneralCaseBodyResponsibleContactPhoneMin = 5;
+export const createAdminFuneralCaseBodyResponsibleContactPhoneMax = 30;
+
+export const createAdminFuneralCaseBodyNotesMax = 2000;
+
+
+
+export const CreateAdminFuneralCaseBody = zod.object({
+  "serviceRequestId": zod.string().uuid(),
+  "deceasedFullName": zod.string().min(createAdminFuneralCaseBodyDeceasedFullNameMin).max(createAdminFuneralCaseBodyDeceasedFullNameMax),
+  "deceasedDateOfDeath": zod.coerce.date().optional(),
+  "serviceLocation": zod.string().max(createAdminFuneralCaseBodyServiceLocationMax).optional(),
+  "responsibleContactName": zod.string().min(createAdminFuneralCaseBodyResponsibleContactNameMin).max(createAdminFuneralCaseBodyResponsibleContactNameMax),
+  "responsibleContactPhone": zod.string().min(createAdminFuneralCaseBodyResponsibleContactPhoneMin).max(createAdminFuneralCaseBodyResponsibleContactPhoneMax),
+  "assignedEmployeeId": zod.string().uuid().optional(),
+  "notes": zod.string().max(createAdminFuneralCaseBodyNotesMax).optional()
+})
+
+export const CreateAdminFuneralCaseResponse = zod.object({
+  "funeralCase": zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),zod.null()]),
+  "newStatus": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "changedByUserId": zod.string().uuid(),
+  "changedByName": zod.string(),
+  "observation": zod.union([zod.string(),zod.null()]),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get funeral case details and status history
+ */
+export const GetAdminFuneralCaseParams = zod.object({
+  "caseId": zod.coerce.string().uuid()
+})
+
+export const GetAdminFuneralCaseResponse = zod.object({
+  "funeralCase": zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),zod.null()]),
+  "newStatus": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "changedByUserId": zod.string().uuid(),
+  "changedByName": zod.string(),
+  "observation": zod.union([zod.string(),zod.null()]),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Change funeral case status and record an observation
+ */
+export const UpdateAdminFuneralCaseStatusParams = zod.object({
+  "caseId": zod.coerce.string().uuid()
+})
+
+export const updateAdminFuneralCaseStatusBodyObservationMax = 1000;
+
+
+
+export const UpdateAdminFuneralCaseStatusBody = zod.object({
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "observation": zod.string().max(updateAdminFuneralCaseStatusBodyObservationMax).optional()
+})
+
+export const UpdateAdminFuneralCaseStatusResponse = zod.object({
+  "funeralCase": zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),zod.null()]),
+  "newStatus": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "changedByUserId": zod.string().uuid(),
+  "changedByName": zod.string(),
+  "observation": zod.union([zod.string(),zod.null()]),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Returns only funeral cases assigned to the authenticated employee.
+ * @summary List funeral cases assigned to the authenticated employee
+ */
+export const listEmployeeFuneralCasesQuerySearchMax = 120;
+
+export const listEmployeeFuneralCasesQueryPageDefault = 1;
+
+export const listEmployeeFuneralCasesQueryLimitDefault = 20;
+export const listEmployeeFuneralCasesQueryLimitMax = 100;
+
+
+
+export const ListEmployeeFuneralCasesQueryParams = zod.object({
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']).optional(),
+  "search": zod.coerce.string().max(listEmployeeFuneralCasesQuerySearchMax).optional(),
+  "page": zod.coerce.number().int().min(1).default(listEmployeeFuneralCasesQueryPageDefault),
+  "limit": zod.coerce.number().int().min(1).max(listEmployeeFuneralCasesQueryLimitMax).default(listEmployeeFuneralCasesQueryLimitDefault)
+})
+
+export const ListEmployeeFuneralCasesResponse = zod.object({
+  "funeralCases": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "pagination": zod.object({
+  "page": zod.number().int(),
+  "limit": zod.number().int(),
+  "total": zod.number().int(),
+  "totalPages": zod.number().int()
+})
+})
+
+
+/**
+ * Employees can only access cases assigned to their own account.
+ * @summary Get an assigned funeral case and its status history
+ */
+export const GetEmployeeFuneralCaseParams = zod.object({
+  "caseId": zod.coerce.string().uuid()
+})
+
+export const GetEmployeeFuneralCaseResponse = zod.object({
+  "funeralCase": zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),zod.null()]),
+  "newStatus": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "changedByUserId": zod.string().uuid(),
+  "changedByName": zod.string(),
+  "observation": zod.union([zod.string(),zod.null()]),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Employees may advance their assigned cases but cannot cancel them or modify cases assigned to others.
+ * @summary Advance the status of an assigned funeral case
+ */
+export const UpdateEmployeeFuneralCaseStatusParams = zod.object({
+  "caseId": zod.coerce.string().uuid()
+})
+
+export const updateEmployeeFuneralCaseStatusBodyObservationMax = 1000;
+
+
+
+export const UpdateEmployeeFuneralCaseStatusBody = zod.object({
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "observation": zod.string().max(updateEmployeeFuneralCaseStatusBodyObservationMax).optional()
+})
+
+export const UpdateEmployeeFuneralCaseStatusResponse = zod.object({
+  "funeralCase": zod.object({
+  "id": zod.string().uuid(),
+  "caseNumber": zod.string(),
+  "serviceRequestId": zod.string().uuid(),
+  "serviceRequestReferenceCode": zod.string(),
+  "deceasedFullName": zod.string(),
+  "deceasedDateOfDeath": zod.union([zod.coerce.date(),zod.null()]),
+  "serviceLocation": zod.union([zod.string(),zod.null()]),
+  "responsibleContactName": zod.string(),
+  "responsibleContactPhone": zod.string(),
+  "assignedEmployeeId": zod.union([zod.string().uuid(),zod.null()]),
+  "assignedEmployeeName": zod.union([zod.string(),zod.null()]),
+  "status": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "notes": zod.union([zod.string(),zod.null()]),
+  "createdByUserId": zod.string().uuid(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "history": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "previousStatus": zod.union([zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),zod.null()]),
+  "newStatus": zod.enum(['abierto', 'en_preparacion', 'programado', 'en_ejecucion', 'finalizado', 'cancelado']),
+  "changedByUserId": zod.string().uuid(),
+  "changedByName": zod.string(),
+  "observation": zod.union([zod.string(),zod.null()]),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary List service requests for administrators
  */
 export const listAdminServiceRequestsQuerySearchMax = 120;

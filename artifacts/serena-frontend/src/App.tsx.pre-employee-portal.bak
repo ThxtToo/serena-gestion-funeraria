@@ -1,0 +1,1540 @@
+import { useState, type FormEvent, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { Link, Redirect, Route, Switch, useLocation } from "wouter";
+import {
+  AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
+  KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
+  BookOpen, Plus, Pencil, Power, Send, CalendarDays,
+  ClipboardList, Search, X, Clock3, FileText,
+} from "lucide-react";
+import {
+  getGetAuthSessionQueryKey, getListEmployeesQueryKey,
+  getListAdminServiceOfferingsQueryKey, getListPublicServiceOfferingsQueryKey,
+  useChangePassword, useCreateEmployee, useGetAuthSession, useListEmployees,
+  useLogin, useLogout, useSetEmployeeActive, useListPublicServiceOfferings,
+  useListAdminServiceOfferings, useCreateServiceOffering, useUpdateServiceOffering,
+  useCreateServiceRequest, useGetServiceRequest,
+  getListAdminServiceRequestsQueryKey, getGetAdminServiceRequestQueryKey,
+  useListAdminServiceRequests, useGetAdminServiceRequest,
+  useUpdateAdminServiceRequestStatus,
+  getListAdminFuneralCasesQueryKey, getGetAdminFuneralCaseQueryKey,
+  useListAdminFuneralCases, useGetAdminFuneralCase,
+  useCreateAdminFuneralCase, useUpdateAdminFuneralCaseStatus,
+} from "@workspace/api-client-react";
+import type {
+  AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
+  ServiceOffering, ServiceRequestCreated,
+  ServiceRequestStatusValue, FuneralCaseStatusValue,
+  CreateFuneralCaseInput,
+} from "@workspace/api-client-react";
+import NotFound from "@/pages/not-found";
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
+});
+
+function isUnauthorized(error: unknown) {
+  return Boolean(error && typeof error === "object" && "status" in error && error.status === 401);
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error && typeof error === "object" && "data" in error) {
+    const data = error.data;
+    if (data && typeof data === "object" && "error" in data && typeof data.error === "string") return data.error;
+  }
+  return fallback;
+}
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
+function Brand() {
+  return <span className="brand" aria-label="Serena">
+    <span className="brand-mark" aria-hidden="true">S</span>
+    <span className="brand-word"><strong>serena</strong><small>ESPACIO DE EQUIPO</small></span>
+  </span>;
+}
+
+function AuthAside() {
+  return <aside className="auth-aside">
+    <Brand />
+    <div className="aside-copy">
+      <span className="aside-kicker">ESPACIO PRIVADO · PERSONAL SERENA</span>
+      <h1>El trabajo bien cuidado empieza <em>en equipo.</em></h1>
+      <p>Un espacio interno para organizar el trabajo diario con claridad, respeto y responsabilidad.</p>
+    </div>
+    <div className="aside-foot">Acceso exclusivo para personal invitado</div>
+  </aside>;
+}
+
+function AuthLoading() {
+  return <div className="auth-layout" aria-label="Cargando sesión">
+    <AuthAside />
+    <main className="auth-main"><div className="auth-card">
+      <div className="skeleton" style={{ width: 92 }} />
+      <div className="skeleton" style={{ width: 220, height: 27, marginTop: 24 }} />
+      <div className="skeleton" style={{ width: "86%", marginTop: 24 }} />
+      <div className="skeleton" style={{ width: "100%", height: 46, marginTop: 33 }} />
+      <div className="skeleton" style={{ width: "100%", height: 46, marginTop: 18 }} />
+    </div></main>
+  </div>;
+}
+
+function SignIn({ session }: { session: AuthenticatedSession | undefined }) {
+  const [, setLocation] = useLocation();
+  const login = useLogin();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  if (session) return <Redirect to={session.user.mustChangePassword ? "/change-password" : "/app"} />;
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    login.mutate({ data: { email: email.trim(), password } }, {
+      onSuccess: (data) => {
+        queryClient.setQueryData(getGetAuthSessionQueryKey(), data);
+        setLocation(data.user.mustChangePassword ? "/change-password" : "/app");
+      },
+      onError: () => setError("No pudimos validar tus datos. Comprueba tu correo y contraseña e inténtalo de nuevo."),
+    });
+  };
+  return <div className="auth-layout">
+    <AuthAside />
+    <main className="auth-main">
+      <section className="auth-card">
+        <Link href="/" className="public-back-home">
+          <ArrowRight size={14} className="public-back-icon" /> Volver al sitio público
+        </Link>
+        <p className="eyebrow" style={{ color: "var(--green)", margin: "0 0 13px" }}>INICIO DE SESIÓN</p>
+        <h2>Qué bueno verte.</h2>
+        <p className="auth-intro">Ingresa con la cuenta que te asignó la administración de Serena.</p>
+        {error && <div className="form-alert" role="alert" data-testid="status-login-error"><AlertCircle size={16} />{error}</div>}
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="email">Correo de trabajo</label>
+            <input id="email" data-testid="input-login-email" type="email" autoComplete="username" required maxLength={254} placeholder="nombre@serena.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="password">Contraseña</label>
+            <div className="input-wrap">
+              <input id="password" data-testid="input-login-password" type={showPassword ? "text" : "password"} autoComplete="current-password" required maxLength={128} placeholder="Escribe tu contraseña" value={password} onChange={(event) => setPassword(event.target.value)} />
+              <button className="reveal-button" type="button" data-testid="button-toggle-login-password" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            </div>
+          </div>
+          <button className="primary-btn" data-testid="button-submit-login" type="submit" disabled={login.isPending}>
+            {login.isPending ? "Verificando acceso…" : <>Entrar a Serena <ArrowRight size={15} /></>}
+          </button>
+        </form>
+        <div className="form-note"><ShieldCheck size={15} /><span>El acceso está reservado a personas invitadas. Las cuentas son administradas por Serena.</span></div>
+      </section>
+      <div className="auth-footer">SERENA · SISTEMA INTERNO</div>
+    </main>
+  </div>;
+}
+
+function PasswordChange({ session }: { session: AuthenticatedSession }) {
+  const [, setLocation] = useLocation();
+  const changePassword = useChangePassword();
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [error, setError] = useState("");
+  const firstLogin = session.user.mustChangePassword;
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (newPassword.length < 12) {
+      setError("La nueva contraseña debe tener al menos 12 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmation) {
+      setError("Las contraseñas nuevas no coinciden.");
+      return;
+    }
+    changePassword.mutate({ data: { currentPassword, newPassword } }, {
+      onSuccess: (user: AuthenticatedUser) => {
+        queryClient.setQueryData(getGetAuthSessionQueryKey(), { ...session, user });
+        setLocation("/app");
+      },
+      onError: () => setError("No pudimos actualizar la contraseña. Verifica la contraseña actual e inténtalo de nuevo."),
+    });
+  };
+  return <div className="auth-layout">
+    <AuthAside />
+    <main className="auth-main">
+      <section className="auth-card">
+        <p className="eyebrow" style={{ color: "var(--green)", margin: "0 0 13px" }}>{firstLogin ? "PRIMER ACCESO" : "SEGURIDAD DE CUENTA"}</p>
+        <h2>{firstLogin ? "Crea tu contraseña." : "Actualiza tu contraseña."}</h2>
+        <p className="auth-intro">{firstLogin ? "Antes de continuar, reemplaza la contraseña temporal por una personal y segura." : "Elige una contraseña nueva para proteger el acceso a tu cuenta."}</p>
+        {error && <div className="form-alert" role="alert" data-testid="status-password-error"><AlertCircle size={16} />{error}</div>}
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="current-password">Contraseña actual</label>
+            <input id="current-password" data-testid="input-current-password" type={showPasswords ? "text" : "password"} autoComplete="current-password" required maxLength={128} value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="new-password">Nueva contraseña</label>
+            <input id="new-password" data-testid="input-new-password" type={showPasswords ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} required value={newPassword} onChange={(event) => setNewPassword(event.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="confirm-password">Confirma la nueva contraseña</label>
+            <div className="input-wrap">
+              <input id="confirm-password" data-testid="input-confirm-password" type={showPasswords ? "text" : "password"} autoComplete="new-password" minLength={12} maxLength={128} required value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
+              <button className="reveal-button" type="button" data-testid="button-toggle-password-visibility" aria-label={showPasswords ? "Ocultar contraseñas" : "Mostrar contraseñas"} onClick={() => setShowPasswords(!showPasswords)}>{showPasswords ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+            </div>
+          </div>
+          <p className="password-criteria">Usa al menos 12 caracteres. No compartas tu contraseña con otras personas.</p>
+          <button className="primary-btn" data-testid="button-submit-password" type="submit" disabled={changePassword.isPending}>
+            {changePassword.isPending ? "Guardando…" : <>Guardar contraseña <ArrowRight size={15} /></>}
+          </button>
+        </form>
+        {!firstLogin && <div className="form-note"><LockKeyhole size={15} /><span>El cambio se aplicará a los próximos inicios de sesión.</span></div>}
+      </section>
+      <div className="auth-footer">SERENA · ACCESO PROTEGIDO</div>
+    </main>
+  </div>;
+}
+
+function WorkspaceShell({ session, children }: { session: AuthenticatedSession; children: ReactNode }) {
+  const [location, setLocation] = useLocation();
+  const logout = useLogout();
+  const [logoutError, setLogoutError] = useState("");
+  const user = session.user;
+  const isAdmin = user.role === "administrador";
+  const signOut = () => {
+    setLogoutError("");
+    logout.mutate(undefined, {
+      onSuccess: () => {
+        queryClient.removeQueries({ queryKey: getGetAuthSessionQueryKey() });
+        queryClient.removeQueries({ queryKey: getListEmployeesQueryKey() });
+        setLocation("/");
+      },
+      onError: () => setLogoutError("No pudimos cerrar la sesión. Comprueba tu conexión e inténtalo de nuevo."),
+    });
+  };
+  return <div className="shell">
+    <aside className="sidebar">
+      <Link href="/app" className="brand" data-testid="link-brand-home"><span className="brand-mark">S</span><span className="brand-word"><strong>serena</strong><small>ESPACIO DE EQUIPO</small></span></Link>
+      <nav aria-label="Navegación del espacio">
+        <div className="nav-label">Espacio de trabajo</div>
+        <Link href="/app" className={`side-link ${location === "/app" ? "active" : ""}`} data-testid="link-workspace-home"><UserRound size={16} /><span>Inicio</span></Link>
+        {isAdmin && <>
+          <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
+          <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
+          <Link href="/admin/service-requests" className={`side-link ${location === "/admin/service-requests" ? "active" : ""}`} data-testid="link-admin-service-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
+          <Link href="/admin/funeral-cases" className={`side-link ${location === "/admin/funeral-cases" ? "active" : ""}`} data-testid="link-admin-funeral-cases"><FileText size={16} /><span>Expedientes</span></Link>
+        </>}
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="user-mini">
+          <span className="avatar-initials" data-testid="text-user-initials">{initials(user.fullName)}</span>
+          <span className="user-mini-name"><strong data-testid="text-user-name">{user.fullName}</strong><small>{isAdmin ? "Administración" : "Personal Serena"}</small></span>
+        </div>
+        <button className="logout-btn" data-testid="button-logout" type="button" onClick={signOut} disabled={logout.isPending}>
+          {logout.isPending ? <RefreshCw size={14} /> : <DoorOpen size={15} />}<span>{logout.isPending ? "Saliendo…" : "Cerrar sesión"}</span>
+        </button>
+      </div>
+    </aside>
+    <main className="main-area">
+      <header className="topbar"><span className="topbar-label">Serena / Personal</span><span className="topbar-date">ÁREA PRIVADA · ACCESO SEGURO</span></header>
+      {logoutError && <div className="page-inline-error" role="alert" data-testid="status-logout-error">{logoutError}</div>}
+      {children}
+    </main>
+  </div>;
+}
+
+function EmployeeHome({ session }: { session: AuthenticatedSession }) {
+  const user = session.user;
+  const admin = user.role === "administrador";
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ESPACIO DE TRABAJO</p>
+      <h1 className="page-title" data-testid="text-welcome-title">Buen día, {user.fullName.split(" ")[0]}.</h1>
+      <p className="page-subtitle">Has iniciado sesión en el espacio interno de Serena. Mantén tu información de acceso protegida y cierra sesión al terminar.</p>
+      <div className="welcome-panel">
+        <div className="welcome-text">
+          <h2>Un equipo presente, un trabajo cuidadoso.</h2>
+          <p>Este espacio está reservado para el personal de Serena. La administración de tu cuenta y permisos corresponde al equipo administrador.</p>
+        </div>
+        <span className="welcome-stamp" aria-hidden="true">S</span>
+      </div>
+      <div className="quick-row">
+        <Link href="/change-password" className="quick-link" data-testid="link-change-password"><KeyRound size={17} /><span>Cambiar contraseña</span><ArrowRight size={14} /></Link>
+        {admin && <Link href="/admin/users" className="quick-link" data-testid="link-manage-accounts"><Users size={17} /><span>Administrar cuentas</span><ArrowRight size={14} /></Link>}
+      </div>
+    </section>
+  </WorkspaceShell>;
+}
+
+function LoadingEmployees() {
+  return <div className="table-wrap" aria-label="Cargando cuentas" data-testid="status-employees-loading">
+    {[1, 2, 3].map((row) => <div className="skeleton-row" key={row}><div><div className="skeleton" style={{ width: 135 }} /><div className="skeleton" style={{ width: 105 }} /></div><div className="skeleton" style={{ width: 73 }} /></div>)}
+  </div>;
+}
+
+function CreateEmployeeModal({ onClose, onCreated }: { onClose: () => void; onCreated: (result: EmployeeCreateResult) => void }) {
+  const createEmployee = useCreateEmployee();
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    createEmployee.mutate({ data: { fullName: fullName.trim(), email: email.trim() } }, {
+      onSuccess: (result) => onCreated(result),
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos crear la cuenta. Revisa los datos e inténtalo de nuevo.")),
+    });
+  };
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createEmployee.isPending) onClose(); }}>
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="create-title">
+      <div className="modal-head"><div><h2 id="create-title">Invitar a una persona</h2><p>Se creará una cuenta de empleado con acceso inicial temporal.</p></div><button className="icon-button" type="button" data-testid="button-close-create" aria-label="Cerrar" onClick={onClose}><span aria-hidden="true">×</span></button></div>
+      {error && <div className="page-inline-error" role="alert" data-testid="status-create-error">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="field"><label htmlFor="new-fullname">Nombre completo</label><input id="new-fullname" data-testid="input-employee-name" required minLength={2} maxLength={120} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Nombre y apellidos" /></div>
+        <div className="field"><label htmlFor="new-email">Correo de trabajo</label><input id="new-email" data-testid="input-employee-email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@serena.com" /></div>
+        <div className="form-note"><ShieldCheck size={15} /><span>Las cuentas nuevas comienzan con el rol de empleado. La persona deberá cambiar su contraseña al iniciar sesión por primera vez.</span></div>
+        <div className="modal-actions"><button className="quiet-btn" type="button" data-testid="button-cancel-create" onClick={onClose} disabled={createEmployee.isPending}>Cancelar</button><button className="secondary-btn" type="submit" data-testid="button-create-employee" disabled={createEmployee.isPending}>{createEmployee.isPending ? "Creando…" : <><UserPlus size={15} /> Crear cuenta</>}</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+function TemporaryPasswordModal({ result, onClose }: { result: EmployeeCreateResult; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const copyPassword = async () => {
+    try {
+      await navigator.clipboard.writeText(result.temporaryPassword);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return <div className="modal-backdrop" role="presentation">
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="password-created-title">
+      <div className="success-banner" data-testid="status-employee-created"><CheckCircle2 size={17} /><span>La cuenta de <strong>{result.employee.fullName}</strong> ya está creada.</span></div>
+      <div className="modal-head"><div><h2 id="password-created-title">Contraseña temporal</h2><p>Compártela de forma segura con la persona invitada. Esta contraseña solo se muestra ahora.</p></div></div>
+      <div className="temporary-box">
+        <label>Acceso inicial</label>
+        <div className="temporary-password" data-testid="text-temporary-password"><span>{result.temporaryPassword}</span><button className="temporary-copy" type="button" data-testid="button-copy-temporary-password" aria-label="Copiar contraseña temporal" onClick={copyPassword}>{copied ? <Check size={15} /> : <Clipboard size={15} />}</button></div>
+      </div>
+      <div className="modal-warning"><LockKeyhole size={15} /><span>Debe cambiar esta contraseña en su primer inicio de sesión. Al cerrar esta ventana, no volverá a mostrarse.</span></div>
+      <div className="modal-actions"><button className="secondary-btn" type="button" data-testid="button-dismiss-temporary-password" onClick={onClose}>Entendido</button></div>
+    </section>
+  </div>;
+}
+
+function AdminUsers({ session }: { session: AuthenticatedSession }) {
+  const employeesQuery = useListEmployees({ query: { queryKey: getListEmployeesQueryKey() } });
+  const setActive = useSetEmployeeActive();
+  const queryClient = useQueryClient();
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<EmployeeCreateResult | null>(null);
+  const [actionError, setActionError] = useState("");
+  const updateActive = (userId: string, isActive: boolean) => {
+    setActionError("");
+    setActive.mutate({ userId, data: { isActive } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() }),
+      onError: () => setActionError("No pudimos actualizar el estado de la cuenta. Inténtalo de nuevo."),
+    });
+  };
+  const employees = employeesQuery.data?.employees ?? [];
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ADMINISTRACIÓN · PERSONAL</p>
+      <h1 className="page-title">Cuentas de equipo.</h1>
+      <p className="page-subtitle">Invita al personal y mantén el acceso de cada cuenta bajo control. Solo las personas administradoras pueden gestionar estas cuentas.</p>
+      <div className="admin-actions">
+        <div><h2 className="section-title">Personal Serena</h2><span style={{ color: "var(--muted)", fontSize: 10 }}>{employeesQuery.isLoading ? "Consultando cuentas…" : `${employees.length} ${employees.length === 1 ? "cuenta" : "cuentas"}`}</span></div>
+        <button className="secondary-btn" type="button" data-testid="button-open-create-employee" onClick={() => setCreating(true)}><UserPlus size={15} /> Invitar personal</button>
+      </div>
+      {actionError && <div className="page-inline-error" role="alert" data-testid="status-account-action-error">{actionError}</div>}
+      {employeesQuery.isLoading ? <LoadingEmployees /> : employeesQuery.isError ? <div className="error-state table-wrap" data-testid="status-employees-error"><span className="state-symbol"><AlertCircle size={17} /></span><div><strong>No se pudieron cargar las cuentas</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="quiet-btn" style={{ marginTop: 15 }} data-testid="button-retry-employees" onClick={() => employeesQuery.refetch()}><RefreshCw size={14} /> Reintentar</button></div></div> : employees.length === 0 ? <div className="empty-state table-wrap" data-testid="status-employees-empty"><span className="state-symbol"><Users size={17} /></span><div><strong>El equipo empieza aquí</strong><p>Invita a la primera persona para darle acceso a Serena.</p></div></div> : <div className="table-wrap">
+        <table className="employee-table">
+          <thead><tr><th>Persona</th><th>Acceso</th><th>Cuenta</th><th>Último acceso</th><th>Acción</th></tr></thead>
+          <tbody>
+            {employees.map((employee) => <tr key={employee.id} data-testid={`row-employee-${employee.id}`}>
+              <td><div className="employee-name"><strong>{employee.fullName}</strong><small>{employee.email}</small></div></td>
+              <td>{employee.role === "administrador" ? "Administración" : "Empleado"}</td>
+              <td><div style={{ display: "grid", gap: 5 }}><span className={`pill ${employee.isActive ? "active" : "inactive"}`} data-testid={`status-employee-${employee.id}`}>{employee.isActive ? "Activa" : "Desactivada"}</span>{employee.mustChangePassword && <span className="pill pending">Cambio pendiente</span>}</div></td>
+              <td>{employee.lastLoginAt ? new Intl.DateTimeFormat("es", { dateStyle: "medium" }).format(new Date(employee.lastLoginAt)) : "Aún no ha ingresado"}</td>
+              <td>{employee.id === session.user.id ? <span style={{ color: "#8b968f", fontSize: 10 }}>Tu cuenta</span> : <button className="table-action" type="button" data-testid={`button-toggle-active-${employee.id}`} disabled={setActive.isPending} onClick={() => updateActive(employee.id, !employee.isActive)}>{employee.isActive ? "Desactivar" : "Reactivar"}</button>}</td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>}
+    </section>
+    {creating && <CreateEmployeeModal onClose={() => setCreating(false)} onCreated={(result) => {
+      setCreating(false);
+      setCreated(result);
+      queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+    }} />}
+    {created && <TemporaryPasswordModal result={created} onClose={() => setCreated(null)} />}
+  </WorkspaceShell>;
+}
+
+
+
+
+function PublicHomePage() {
+  const offeringsQuery = useListPublicServiceOfferings();
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  return <main className="public-home">
+    <header className="public-nav">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <nav aria-label="Navegación principal">
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Cómo funciona</a>
+        <Link href="/consultar-solicitud">Consultar solicitud</Link>
+        <Link className="public-nav-staff" href="/personal">Acceso del personal</Link>
+      </nav>
+    </header>
+
+    <section className="public-hero">
+      <div className="public-hero-copy">
+        <p className="public-eyebrow">SERENA · ACOMPAÑAMIENTO Y ATENCIÓN</p>
+        <h1>En los momentos difíciles, <em>no tienes que estar a solas.</em></h1>
+        <p className="public-hero-description">
+          Te acompañamos con respeto, sensibilidad y atención organizada.
+          Nuestro equipo está disponible para orientarte y ayudarte a conocer
+          las alternativas de servicio.
+        </p>
+        <div className="public-hero-actions">
+          <Link className="public-primary-link" href="/solicitar-servicio">
+            Solicitar atención <ArrowRight size={16} />
+          </Link>
+          <Link className="public-secondary-link" href="/consultar-solicitud">
+            Consultar mi solicitud
+          </Link>
+        </div>
+        <div className="public-trust-note">
+          <ShieldCheck size={17} />
+          <span>Atención respetuosa · Información tratada con discreción</span>
+        </div>
+      </div>
+      <div className="public-hero-art" aria-label="Composición decorativa de hojas">
+        <div className="public-art-circle public-art-circle-one"></div>
+        <div className="public-art-circle public-art-circle-two"></div>
+        <div className="public-art-leaf">S</div>
+        <span className="public-art-caption">RESPETO · DIGNIDAD · ACOMPAÑAMIENTO</span>
+      </div>
+    </section>
+
+    <section className="public-intro-strip">
+      <span>UNA ATENCIÓN MÁS HUMANA</span>
+      <p>Escuchamos tus necesidades y te orientamos en cada paso, con claridad y consideración.</p>
+    </section>
+
+    <section className="public-section" id="servicios">
+      <div className="public-section-heading">
+        <div>
+          <p className="public-eyebrow">NUESTRO CATÁLOGO</p>
+          <h2>Servicios disponibles</h2>
+          <p>Conoce las opciones publicadas por nuestro equipo y solicita información.</p>
+        </div>
+        <Link className="public-text-link" href="/solicitar-servicio">
+          Solicitar un servicio <ArrowRight size={15} />
+        </Link>
+      </div>
+
+      {offeringsQuery.isLoading ? <div className="public-feedback">Cargando servicios disponibles…</div>
+      : offeringsQuery.isError ? <div className="public-feedback">
+          No pudimos cargar el catálogo.
+          <button className="quiet-btn" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+        </div>
+      : offerings.length === 0 ? <div className="public-feedback">
+          En este momento no hay servicios publicados. Puedes comunicarte con nuestro equipo mediante el formulario de solicitud.
+        </div>
+      : <div className="public-service-grid">
+          {offerings.map((offering) => <article className="public-service-card" key={offering.id}>
+            <span className="public-service-icon"><BookOpen size={19} /></span>
+            <h3>{offering.name}</h3>
+            <p>{offering.description || "Nuestro equipo puede orientarte sobre este servicio y resolver tus consultas."}</p>
+            <Link to="/solicitar-servicio">Solicitar información <ArrowRight size={14} /></Link>
+          </article>)}
+        </div>}
+    </section>
+
+    <section className="public-process" id="proceso">
+      <div className="public-process-heading">
+        <p className="public-eyebrow">TE ACOMPAÑAMOS</p>
+        <h2>Un proceso claro, paso a paso.</h2>
+        <p>Queremos que sepas qué ocurre después de contactar con Serena.</p>
+      </div>
+      <div className="public-steps">
+        <article><span>01</span><h3>Comparte tu solicitud</h3><p>Indícanos tus datos de contacto y el servicio sobre el que deseas recibir orientación.</p></article>
+        <article><span>02</span><h3>Revisamos la información</h3><p>Nuestro equipo recibe la solicitud y revisa los detalles para dar seguimiento.</p></article>
+        <article><span>03</span><h3>Te contactamos</h3><p>Nos comunicaremos contigo para orientarte sobre los siguientes pasos.</p></article>
+      </div>
+    </section>
+
+    <section className="public-cta">
+      <div><p className="public-eyebrow">ESTAMOS PARA ORIENTARTE</p>
+        <h2>Podemos comenzar por escucharte.</h2>
+        <p>Comparte lo que necesitas y nuestro equipo dará seguimiento a tu solicitud.</p>
+      </div>
+      <Link className="public-primary-link" href="/solicitar-servicio">
+        Iniciar solicitud <ArrowRight size={16} />
+      </Link>
+    </section>
+
+    <footer className="public-footer">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <span>Atención con respeto y dignidad.</span>
+      <div><Link href="/consultar-solicitud">Consultar solicitud</Link><Link href="/personal">Acceso del personal</Link></div>
+      <small>Plataforma de demostración académica.</small>
+    </footer>
+  </main>;
+}
+
+function PublicRequestLookup() {
+  const [reference, setReference] = useState("");
+  const [submittedReference, setSubmittedReference] = useState("");
+  const normalizedReference = submittedReference.trim();
+  const requestQuery = useGetServiceRequest(normalizedReference, {
+    query: { enabled: normalizedReference.length > 0, retry: false },
+  });
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const value = reference.trim();
+    if (!value) return;
+    setSubmittedReference(value);
+  };
+
+  const statusLabels: Record<ServiceRequestStatusValue, string> = {
+    pendiente: "Pendiente",
+    en_revision: "En revisión",
+    confirmada: "Confirmada",
+    rechazada: "Rechazada",
+    cancelada: "Cancelada",
+  };
+
+  return <div className="auth-layout public-request-layout">
+    <AuthAside />
+    <main className="auth-main public-request-main">
+      <section className="auth-card public-request-card">
+        <div className="public-card-navigation">
+          <Link href="/" className="public-brand-home" aria-label="Volver al inicio de Serena">
+            <Brand />
+          </Link>
+          <Link href="/" className="public-back-home">
+            <ArrowRight size={14} className="public-back-icon" /> Volver al inicio
+          </Link>
+        </div>
+        <p className="page-kicker">SEGUIMIENTO DE SOLICITUD</p>
+        <h1 className="page-title">Consulta el estado de tu solicitud.</h1>
+        <p className="auth-intro">
+          Introduce el código de referencia que recibiste al registrar tu solicitud.
+          Te mostraremos su estado actual.
+        </p>
+        <form onSubmit={submit}>
+          <div className="field">
+            <label htmlFor="lookup-reference">Código de referencia</label>
+            <input id="lookup-reference" required maxLength={80}
+              value={reference} onChange={(event) => setReference(event.target.value)}
+              placeholder="Ej. SER-XXXXXXXX" autoComplete="off" />
+          </div>
+          <button className="primary-btn" type="submit">Consultar estado <Search size={15} /></button>
+        </form>
+
+        {normalizedReference && <>
+          {requestQuery.isFetching && <div className="public-lookup-result" role="status">Consultando referencia…</div>}
+          {requestQuery.isError && !requestQuery.isFetching && <div className="page-inline-error" role="alert">
+            No encontramos una solicitud con esa referencia o no fue posible completar la consulta. Verifica el código e inténtalo de nuevo.
+            <button className="quiet-btn" type="button" onClick={() => requestQuery.refetch()}>Reintentar</button>
+          </div>}
+          {requestQuery.data && <div className="public-lookup-result" aria-live="polite">
+            <span className="public-eyebrow">RESULTADO DE CONSULTA</span>
+            <strong className="public-lookup-code">{requestQuery.data.referenceCode}</strong>
+            <span className={`pill request-status status-${requestQuery.data.status}`}>
+              {statusLabels[requestQuery.data.status]}
+            </span>
+            <p>{requestQuery.data.message}</p>
+          </div>}
+        </>}
+
+        <div className="public-request-footer">
+          <Link href="/">Volver al inicio</Link>
+          <Link href="/solicitar-servicio">Registrar una solicitud</Link>
+        </div>
+      </section>
+    </main>
+  </div>;
+}
+
+function PublicServiceRequest() {
+  const offeringsQuery = useListPublicServiceOfferings();
+  const createRequest = useCreateServiceRequest();
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [serviceOfferingId, setServiceOfferingId] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [result, setResult] = useState<ServiceRequestCreated | null>(null);
+  const [error, setError] = useState("");
+
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (!serviceOfferingId) {
+      setError("Selecciona el servicio que deseas solicitar.");
+      return;
+    }
+
+    createRequest.mutate({
+      data: {
+        contactName: contactName.trim(),
+        contactPhone: contactPhone.trim(),
+        serviceOfferingId,
+        ...(requestedDate ? { requestedDate } : {}),
+        ...(notes.trim() ? { notes: notes.trim() } : {}),
+      },
+    }, {
+      onSuccess: (response) => setResult(response),
+      onError: (requestError) => setError(getErrorMessage(
+        requestError,
+        "No pudimos registrar tu solicitud. Comprueba los datos e inténtalo de nuevo.",
+      )),
+    });
+  };
+
+  return <div className="auth-layout public-request-layout">
+    <AuthAside />
+    <main className="auth-main public-request-main">
+      <section className="auth-card public-request-card">
+        <div className="public-card-navigation">
+          <Link href="/" className="public-brand-home" aria-label="Volver al inicio de Serena">
+            <Brand />
+          </Link>
+          <Link href="/" className="public-back-home">
+            <ArrowRight size={14} className="public-back-icon" /> Volver al inicio
+          </Link>
+        </div>
+        {result ? <>
+          <span className="state-symbol"><CheckCircle2 size={18} /></span>
+          <p className="page-kicker">SOLICITUD REGISTRADA</p>
+          <h1 className="page-title">Gracias por contactar a Serena.</h1>
+          <div className="success-banner" role="status">
+            <CheckCircle2 size={18} />
+            <span>{result.message}</span>
+          </div>
+          <div className="request-reference">
+            <span>REFERENCIA DE SOLICITUD</span>
+            <strong>{result.referenceCode}</strong>
+            <small>Estado: pendiente de revisión</small>
+          </div>
+          <p className="auth-intro">El equipo revisará la información y se pondrá en contacto contigo. Esta solicitud no representa una confirmación de disponibilidad ni del servicio.</p>
+          <button className="primary-btn" type="button" onClick={() => {
+            setResult(null);
+            setContactName("");
+            setContactPhone("");
+            setServiceOfferingId("");
+            setRequestedDate("");
+            setNotes("");
+          }}>Registrar otra solicitud <ArrowRight size={15} /></button>
+        </> : <>
+          <p className="page-kicker">ATENCIÓN Y ACOMPAÑAMIENTO</p>
+          <h1 className="page-title">Estamos aquí para ayudarte.</h1>
+          <p className="auth-intro">Comparte tus datos y el servicio que necesitas. Nuestro equipo revisará tu solicitud y se comunicará contigo.</p>
+
+          {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+          {offeringsQuery.isLoading ? <div className="loading-state">Cargando servicios disponibles…</div>
+          : offeringsQuery.isError ? <div className="error-state">
+              <strong>No pudimos cargar los servicios.</strong>
+              <p>Comprueba tu conexión e inténtalo de nuevo.</p>
+              <button className="quiet-btn" type="button" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+            </div>
+          : offerings.length === 0 ? <div className="empty-state">
+              <strong>Catálogo temporalmente no disponible</strong>
+              <p>En este momento no hay servicios publicados para solicitar.</p>
+            </div>
+          : <form onSubmit={submit}>
+              <div className="field">
+                <label htmlFor="request-contact-name">Nombre completo</label>
+                <input id="request-contact-name" required minLength={2} maxLength={120}
+                  autoComplete="name" value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                  placeholder="Nombre y apellidos" />
+              </div>
+              <div className="field">
+                <label htmlFor="request-contact-phone">Teléfono de contacto</label>
+                <input id="request-contact-phone" required minLength={5} maxLength={30}
+                  type="tel" autoComplete="tel" value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  placeholder="Número de teléfono" />
+              </div>
+              <div className="field">
+                <label htmlFor="request-offering">Servicio que necesitas</label>
+                <select id="request-offering" required value={serviceOfferingId}
+                  onChange={(event) => setServiceOfferingId(event.target.value)}>
+                  <option value="">Selecciona un servicio</option>
+                  {offerings.map((offering) => <option key={offering.id} value={offering.id}>{offering.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="request-date">Fecha de preferencia (opcional)</label>
+                <input id="request-date" type="date" value={requestedDate}
+                  onChange={(event) => setRequestedDate(event.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="request-notes">Información adicional (opcional)</label>
+                <textarea id="request-notes" maxLength={1000} rows={4}
+                  value={notes} onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Cuéntanos brevemente cómo podemos ayudarte." />
+              </div>
+              <div className="form-note"><ShieldCheck size={15} /><span>Tu solicitud será revisada por nuestro equipo. El envío no confirma la disponibilidad del servicio.</span></div>
+              <button className="primary-btn" type="submit" disabled={createRequest.isPending}>
+                {createRequest.isPending ? "Enviando solicitud…" : <>Enviar solicitud <Send size={15} /></>}
+              </button>
+            </form>}
+          <div className="public-request-footer"><Link href="/personal">Acceso para personal Serena</Link></div>
+        </>}
+      </section>
+    </main>
+  </div>;
+}
+
+function ServiceOfferingForm({
+  offering, onClose, onSaved,
+}: {
+  offering?: ServiceOffering;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const createOffering = useCreateServiceOffering();
+  const updateOffering = useUpdateServiceOffering();
+  const [name, setName] = useState(offering?.name ?? "");
+  const [description, setDescription] = useState(offering?.description ?? "");
+  const [error, setError] = useState("");
+  const pending = createOffering.isPending || updateOffering.isPending;
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    const data = { name: name.trim(), description: description.trim() || null };
+    const callbacks = {
+      onSuccess: () => onSaved(),
+      onError: (requestError: unknown) => setError(getErrorMessage(
+        requestError,
+        "No pudimos guardar el servicio. Comprueba si ya existe otro con ese nombre.",
+      )),
+    };
+    if (offering) {
+      updateOffering.mutate({ serviceOfferingId: offering.id, data }, callbacks);
+    } else {
+      createOffering.mutate({ data }, callbacks);
+    }
+  };
+
+  return <div className="modal-backdrop" role="presentation"
+    onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+    <section className="modal" role="dialog" aria-modal="true" aria-labelledby="offering-form-title">
+      <div className="modal-head">
+        <div><h2 id="offering-form-title">{offering ? "Editar servicio" : "Nuevo servicio"}</h2>
+          <p>Los servicios activos estarán disponibles en el formulario público.</p></div>
+        <button className="icon-button" type="button" aria-label="Cerrar" onClick={onClose}>×</button>
+      </div>
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="field">
+          <label htmlFor="offering-name">Nombre del servicio</label>
+          <input id="offering-name" required minLength={2} maxLength={120}
+            value={name} onChange={(event) => setName(event.target.value)}
+            placeholder="Nombre del servicio" />
+        </div>
+        <div className="field">
+          <label htmlFor="offering-description">Descripción (opcional)</label>
+          <textarea id="offering-description" rows={4} maxLength={1000}
+            value={description} onChange={(event) => setDescription(event.target.value)}
+            placeholder="Describe brevemente el servicio." />
+        </div>
+        <div className="modal-actions">
+          <button className="quiet-btn" type="button" onClick={onClose} disabled={pending}>Cancelar</button>
+          <button className="secondary-btn" type="submit" disabled={pending}>
+            {pending ? "Guardando…" : <><Check size={15} /> Guardar servicio</>}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>;
+}
+
+function AdminServiceOfferings({ session }: { session: AuthenticatedSession }) {
+  const offeringsQuery = useListAdminServiceOfferings();
+  const updateOffering = useUpdateServiceOffering();
+  const client = useQueryClient();
+  const [editing, setEditing] = useState<ServiceOffering | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const refreshCatalog = () => {
+    client.invalidateQueries({ queryKey: getListAdminServiceOfferingsQueryKey() });
+    client.invalidateQueries({ queryKey: getListPublicServiceOfferingsQueryKey() });
+    setCreating(false);
+    setEditing(null);
+    setNotice("El catálogo se actualizó correctamente.");
+    setError("");
+  };
+
+  const toggleActive = (offering: ServiceOffering) => {
+    setError("");
+    setNotice("");
+    updateOffering.mutate({
+      serviceOfferingId: offering.id,
+      data: { isActive: !offering.isActive },
+    }, {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListAdminServiceOfferingsQueryKey() });
+        client.invalidateQueries({ queryKey: getListPublicServiceOfferingsQueryKey() });
+        setNotice(offering.isActive
+          ? "El servicio se desactivó. Se conservarán las solicitudes históricas."
+          : "El servicio volvió a estar disponible en el formulario público.");
+      },
+      onError: (requestError) => setError(getErrorMessage(
+        requestError, "No pudimos cambiar el estado del servicio.",
+      )),
+    });
+  };
+
+  const offerings = offeringsQuery.data?.serviceOfferings ?? [];
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ADMINISTRACIÓN</p>
+      <h1 className="page-title">Catálogo de servicios.</h1>
+      <p className="page-subtitle">Administra los servicios que las personas pueden seleccionar al enviar una solicitud. Desactivar un servicio no elimina su historial.</p>
+
+      <div className="admin-actions">
+        <span className="catalog-count">{offerings.length} {offerings.length === 1 ? "servicio registrado" : "servicios registrados"}</span>
+        <button className="secondary-btn" type="button" onClick={() => { setCreating(true); setNotice(""); }}>
+          <Plus size={15} /> Nuevo servicio
+        </button>
+      </div>
+
+      {notice && <div className="success-banner" role="status"><CheckCircle2 size={17} /><span>{notice}</span></div>}
+      {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+      {offeringsQuery.isLoading ? <div className="loading-state">Cargando catálogo…</div>
+      : offeringsQuery.isError ? <div className="error-state">
+          <strong>No pudimos cargar el catálogo.</strong>
+          <p>Comprueba tu sesión y vuelve a intentarlo.</p>
+          <button className="quiet-btn" type="button" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+        </div>
+      : offerings.length === 0 ? <div className="empty-state">
+          <strong>Aún no hay servicios</strong>
+          <p>Crea el primer servicio para publicarlo en el formulario de solicitudes.</p>
+        </div>
+      : <div className="table-wrap">
+          <table className="employee-table">
+            <thead><tr><th>Servicio</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>{offerings.map((offering) => <tr key={offering.id}>
+              <td><strong>{offering.name}</strong></td>
+              <td>{offering.description || "—"}</td>
+              <td><span className={`pill ${offering.isActive ? "active" : "inactive"}`}>{offering.isActive ? "Activo" : "Inactivo"}</span></td>
+              <td><div className="catalog-row-actions">
+                <button className="quiet-btn" type="button" onClick={() => { setEditing(offering); setNotice(""); }} aria-label={`Editar ${offering.name}`}><Pencil size={14} /> Editar</button>
+                <button className="quiet-btn" type="button" disabled={updateOffering.isPending}
+                  onClick={() => toggleActive(offering)} aria-label={`${offering.isActive ? "Desactivar" : "Activar"} ${offering.name}`}>
+                  <Power size={14} /> {offering.isActive ? "Desactivar" : "Activar"}
+                </button>
+              </div></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+
+      <div className="catalog-public-link"><span>Formulario público de solicitudes</span><Link href="/solicitar-servicio">Ver formulario <ArrowRight size={14} /></Link></div>
+    </section>
+    {(creating || editing) && <ServiceOfferingForm
+      offering={editing ?? undefined}
+      onClose={() => { setCreating(false); setEditing(null); }}
+      onSaved={refreshCatalog}
+    />}
+  </WorkspaceShell>;
+}
+
+
+const REQUEST_STATUSES: ServiceRequestStatusValue[] = [
+  "pendiente", "en_revision", "confirmada", "rechazada", "cancelada",
+];
+
+const STATUS_LABELS: Record<ServiceRequestStatusValue, string> = {
+  pendiente: "Pendiente",
+  en_revision: "En revisión",
+  confirmada: "Confirmada",
+  rechazada: "Rechazada",
+  cancelada: "Cancelada",
+};
+
+const NEXT_STATUSES: Record<ServiceRequestStatusValue, ServiceRequestStatusValue[]> = {
+  pendiente: ["en_revision", "rechazada", "cancelada"],
+  en_revision: ["confirmada", "rechazada", "cancelada"],
+  confirmada: ["cancelada"],
+  rechazada: [],
+  cancelada: [],
+};
+
+function formatRequestDate(value?: string | null) {
+  if (!value) return "Sin fecha definida";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function AdminServiceRequests({ session }: { session: AuthenticatedSession }) {
+  const client = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [nextStatus, setNextStatus] = useState<ServiceRequestStatusValue | "">("");
+  const [observation, setObservation] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const listQuery = useListAdminServiceRequests({
+    status: statusFilter ? statusFilter as ServiceRequestStatusValue : undefined,
+    search: search.trim() || undefined,
+    page,
+    limit: 20,
+  });
+
+  const detailQuery = useGetAdminServiceRequest(selectedId ?? "", {
+    query: { enabled: Boolean(selectedId) },
+  });
+
+  const updateStatus = useUpdateAdminServiceRequestStatus();
+
+  const requests = listQuery.data?.serviceRequests ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedRequest = detailQuery.data?.serviceRequest;
+  const availableStatuses = selectedRequest
+    ? NEXT_STATUSES[selectedRequest.status]
+    : [];
+
+  const openDetail = (requestId: string) => {
+    setSelectedId(requestId);
+    setNextStatus("");
+    setObservation("");
+    setError("");
+    setNotice("");
+  };
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setNextStatus("");
+    setObservation("");
+    setError("");
+  };
+
+  const submitStatus = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!selectedId || !nextStatus) return;
+
+    setError("");
+    setNotice("");
+
+    updateStatus.mutate({
+      requestId: selectedId,
+      data: {
+        status: nextStatus,
+        ...(observation.trim() ? { observation: observation.trim() } : {}),
+      },
+    }, {
+      onSuccess: () => {
+        client.invalidateQueries({ queryKey: getListAdminServiceRequestsQueryKey() });
+        client.invalidateQueries({ queryKey: getGetAdminServiceRequestQueryKey(selectedId) });
+        setNextStatus("");
+        setObservation("");
+        setNotice("El estado de la solicitud se actualizó y quedó registrado en el historial.");
+      },
+      onError: (mutationError) => setError(getErrorMessage(
+        mutationError,
+        "No pudimos actualizar el estado. Es posible que la solicitud haya cambiado; vuelve a cargarla.",
+      )),
+    });
+  };
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">ADMINISTRACIÓN</p>
+      <h1 className="page-title">Seguimiento de solicitudes.</h1>
+      <p className="page-subtitle">
+        Consulta las solicitudes recibidas, revisa sus datos y registra cada cambio de estado.
+        Las modificaciones quedan documentadas en el historial.
+      </p>
+
+      <div className="request-filters">
+        <label className="request-search">
+          <Search size={16} />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+            placeholder="Buscar por referencia, contacto o teléfono"
+            aria-label="Buscar solicitudes"
+          />
+        </label>
+        <label className="request-status-filter">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {REQUEST_STATUSES.map((status) =>
+              <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+            )}
+          </select>
+        </label>
+      </div>
+
+      {error && !selectedId && <div className="page-inline-error" role="alert">{error}</div>}
+      {notice && !selectedId && <div className="success-banner" role="status">{notice}</div>}
+
+      <div className="admin-actions">
+        <span className="catalog-count">
+          {pagination ? `${pagination.total} solicitudes encontradas` : "Solicitudes recibidas"}
+        </span>
+        <button className="quiet-btn" type="button" onClick={() => listQuery.refetch()}>
+          <RefreshCw size={14} /> Actualizar
+        </button>
+      </div>
+
+      {listQuery.isLoading ? <div className="loading-state">Cargando solicitudes…</div>
+      : listQuery.isError ? <div className="error-state">
+          <strong>No pudimos cargar las solicitudes.</strong>
+          <p>Comprueba tu sesión y vuelve a intentarlo.</p>
+          <button className="quiet-btn" type="button" onClick={() => listQuery.refetch()}>Reintentar</button>
+        </div>
+      : requests.length === 0 ? <div className="empty-state">
+          <strong>No hay solicitudes para mostrar</strong>
+          <p>Cuando se reciban solicitudes, aparecerán en este listado.</p>
+        </div>
+      : <div className="table-wrap">
+          <table className="employee-table request-table">
+            <thead><tr>
+              <th>Referencia</th><th>Contacto</th><th>Servicio</th><th>Fecha solicitada</th><th>Estado</th><th>Detalle</th>
+            </tr></thead>
+            <tbody>{requests.map((request) => <tr key={request.id}>
+              <td><strong className="request-reference-cell">{request.referenceCode}</strong></td>
+              <td><span className="request-contact"><strong>{request.contactName}</strong><small>{request.contactPhone}</small></span></td>
+              <td>{request.serviceType}</td>
+              <td>{request.requestedDate ? formatRequestDate(request.requestedDate) : "No especificada"}</td>
+              <td><span className={`pill request-status status-${request.status}`}>{STATUS_LABELS[request.status]}</span></td>
+              <td><button className="table-action" type="button" onClick={() => openDetail(request.id)}>Ver solicitud</button></td>
+            </tr>)}</tbody>
+          </table>
+        </div>}
+
+      {pagination && pagination.totalPages > 1 && <div className="request-pagination">
+        <span>Página {pagination.page} de {pagination.totalPages}</span>
+        <div>
+          <button className="table-action" type="button" disabled={page <= 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</button>
+          <button className="table-action" type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)}>Siguiente</button>
+        </div>
+      </div>}
+    </section>
+
+    {selectedId && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !updateStatus.isPending) closeDetail();
+    }}>
+      <section className="modal request-detail-modal" role="dialog" aria-modal="true" aria-labelledby="request-detail-title">
+        <div className="modal-head">
+          <div>
+            <p className="page-kicker">EXPEDIENTE DE SOLICITUD</p>
+            <h2 id="request-detail-title">{selectedRequest?.referenceCode ?? "Detalle de solicitud"}</h2>
+            <p>Información de contacto, estado actual e historial de seguimiento.</p>
+          </div>
+          <button className="icon-button" type="button" onClick={closeDetail} disabled={updateStatus.isPending} aria-label="Cerrar detalle"><X size={17} /></button>
+        </div>
+
+        {detailQuery.isLoading ? <div className="loading-state">Cargando expediente…</div>
+        : detailQuery.isError || !selectedRequest ? <div className="error-state">
+            <strong>No pudimos cargar el expediente.</strong>
+            <p>Vuelve a intentarlo.</p>
+            <button className="quiet-btn" type="button" onClick={() => detailQuery.refetch()}>Reintentar</button>
+          </div>
+        : <>
+            {error && <div className="page-inline-error" role="alert">{error}</div>}
+            {notice && <div className="success-banner" role="status">{notice}</div>}
+
+            <div className="request-detail-grid">
+              <div><small>Persona de contacto</small><strong>{selectedRequest.contactName}</strong></div>
+              <div><small>Teléfono</small><strong>{selectedRequest.contactPhone}</strong></div>
+              <div><small>Servicio solicitado</small><strong>{selectedRequest.serviceType}</strong></div>
+              <div><small>Fecha solicitada</small><strong>{formatRequestDate(selectedRequest.requestedDate)}</strong></div>
+              <div><small>Recibida</small><strong>{formatRequestDate(selectedRequest.createdAt)}</strong></div>
+              <div><small>Estado actual</small><strong><span className={`pill request-status status-${selectedRequest.status}`}>{STATUS_LABELS[selectedRequest.status]}</span></strong></div>
+            </div>
+
+            {selectedRequest.notes && <div className="request-notes">
+              <small>Notas de la solicitud</small><p>{selectedRequest.notes}</p>
+            </div>}
+
+            <div className="request-history">
+              <h3><Clock3 size={16} /> Historial de estados</h3>
+              {(detailQuery.data?.history ?? []).length === 0
+                ? <p className="request-history-empty">No hay movimientos registrados.</p>
+                : <ol>{(detailQuery.data?.history ?? []).map((entry) => <li key={entry.id}>
+                    <span className="request-history-dot" />
+                    <div>
+                      <strong>{entry.previousStatus ? `${STATUS_LABELS[entry.previousStatus]} → ` : ""}{STATUS_LABELS[entry.newStatus]}</strong>
+                      <small>{formatRequestDate(entry.createdAt)} · {entry.changedByName || "Formulario público"}</small>
+                      {entry.observation && <p>{entry.observation}</p>}
+                    </div>
+                  </li>)}</ol>}
+            </div>
+
+            {availableStatuses.length > 0 ? <form className="request-update-form" onSubmit={submitStatus}>
+              <h3>Registrar cambio de estado</h3>
+              <label>
+                Nuevo estado
+                <select required value={nextStatus} onChange={(event) => setNextStatus(event.target.value as ServiceRequestStatusValue | "")}>
+                  <option value="">Selecciona el nuevo estado</option>
+                  {availableStatuses.map((status) => <option key={status} value={status}>{STATUS_LABELS[status]}</option>)}
+                </select>
+              </label>
+              <label>
+                Observación <span>(opcional)</span>
+                <textarea rows={3} maxLength={1000} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Añade contexto sobre la decisión o gestión realizada." />
+              </label>
+              <button className="primary-btn" type="submit" disabled={!nextStatus || updateStatus.isPending}>
+                {updateStatus.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+                {updateStatus.isPending ? "Guardando…" : "Guardar cambio"}
+              </button>
+            </form> : <p className="request-terminal-note">Esta solicitud no admite más cambios de estado.</p>}
+          </>}
+      </section>
+    </div>}
+  </WorkspaceShell>;
+}
+
+
+const FUNERAL_STATUS_LABELS: Record<FuneralCaseStatusValue, string> = {
+  abierto: "Abierto",
+  en_preparacion: "En preparación",
+  programado: "Programado",
+  en_ejecucion: "En ejecución",
+  finalizado: "Finalizado",
+  cancelado: "Cancelado",
+};
+
+const NEXT_FUNERAL_STATUSES: Record<FuneralCaseStatusValue, FuneralCaseStatusValue[]> = {
+  abierto: ["en_preparacion", "programado", "cancelado"],
+  en_preparacion: ["programado", "en_ejecucion", "cancelado"],
+  programado: ["en_preparacion", "en_ejecucion", "cancelado"],
+  en_ejecucion: ["finalizado", "cancelado"],
+  finalizado: [],
+  cancelado: [],
+};
+
+function AdminFuneralCases({ session }: { session: AuthenticatedSession }) {
+  const client = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("");
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [requestPage, setRequestPage] = useState(1);
+  const [sourceRequestId, setSourceRequestId] = useState("");
+  const [deceasedName, setDeceasedName] = useState("");
+  const [dateOfDeath, setDateOfDeath] = useState("");
+  const [serviceLocation, setServiceLocation] = useState("");
+  const [responsibleName, setResponsibleName] = useState("");
+  const [responsiblePhone, setResponsiblePhone] = useState("");
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [nextStatus, setNextStatus] = useState<FuneralCaseStatusValue | "">("");
+  const [observation, setObservation] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const listQuery = useListAdminFuneralCases({
+    status: statusFilter ? statusFilter as FuneralCaseStatusValue : undefined,
+    assignedEmployeeId: employeeFilter || undefined,
+    search: search.trim() || undefined,
+    page,
+    limit: 20,
+  });
+
+  const detailQuery = useGetAdminFuneralCase(selectedId ?? "", {
+    query: { enabled: Boolean(selectedId) },
+  });
+
+  const employeesQuery = useListEmployees();
+  const requestsQuery = useListAdminServiceRequests({
+    status: "confirmada",
+    page: requestPage,
+    limit: 100,
+  });
+
+  const createCase = useCreateAdminFuneralCase();
+  const updateStatus = useUpdateAdminFuneralCaseStatus();
+
+  const cases = listQuery.data?.funeralCases ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedCase = detailQuery.data?.funeralCase;
+  const history = detailQuery.data?.history ?? [];
+  const sourceRequests = requestsQuery.data?.serviceRequests ?? [];
+  const requestPagination = requestsQuery.data?.pagination;
+  const employees = (employeesQuery.data?.employees ?? []).filter(
+    (employee) => employee.role === "empleado" && employee.isActive,
+  );
+  const availableStatuses = selectedCase
+    ? NEXT_FUNERAL_STATUSES[selectedCase.status]
+    : [];
+
+  function resetCreateForm() {
+    setSourceRequestId("");
+    setDeceasedName("");
+    setDateOfDeath("");
+    setServiceLocation("");
+    setResponsibleName("");
+    setResponsiblePhone("");
+    setAssignedEmployeeId("");
+    setNotes("");
+    setRequestPage(1);
+  }
+
+  function closeCreate() {
+    setShowCreate(false);
+    setError("");
+    resetCreateForm();
+  }
+
+  function handleSourceRequestChange(id: string) {
+    setSourceRequestId(id);
+    const request = sourceRequests.find((item) => item.id === id);
+    if (request) {
+      setResponsibleName(request.contactName);
+      setResponsiblePhone(request.contactPhone);
+    }
+  }
+
+  function submitCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+
+    if (!sourceRequestId) {
+      setError("Selecciona una solicitud confirmada.");
+      return;
+    }
+
+    const payload: CreateFuneralCaseInput = {
+      serviceRequestId: sourceRequestId,
+      deceasedFullName: deceasedName.trim(),
+      ...(dateOfDeath ? { deceasedDateOfDeath: new Date(`${dateOfDeath}T12:00:00`).toISOString() } : {}),
+      ...(serviceLocation.trim() ? { serviceLocation: serviceLocation.trim() } : {}),
+      responsibleContactName: responsibleName.trim(),
+      responsibleContactPhone: responsiblePhone.trim(),
+      ...(assignedEmployeeId ? { assignedEmployeeId } : {}),
+      ...(notes.trim() ? { notes: notes.trim() } : {}),
+    };
+
+    createCase.mutate({ data: payload }, {
+      onSuccess: async (result) => {
+        await client.invalidateQueries({ queryKey: getListAdminFuneralCasesQueryKey() });
+        closeCreate();
+        setSelectedId(result.funeralCase.id);
+        setNotice(`Expediente ${result.funeralCase.caseNumber} creado correctamente.`);
+      },
+      onError: (mutationError) => {
+        setError(getErrorMessage(mutationError, "No fue posible crear el expediente. Verifica que la solicitud siga confirmada y no tenga un expediente asociado."));
+      },
+    });
+  }
+
+  function submitStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedId || !nextStatus) return;
+    setError("");
+    setNotice("");
+
+    updateStatus.mutate({
+      caseId: selectedId,
+      data: {
+        status: nextStatus,
+        observation: observation.trim() || undefined,
+      },
+    }, {
+      onSuccess: async () => {
+        await Promise.all([
+          client.invalidateQueries({ queryKey: getListAdminFuneralCasesQueryKey() }),
+          client.invalidateQueries({ queryKey: getGetAdminFuneralCaseQueryKey(selectedId) }),
+        ]);
+        setNextStatus("");
+        setObservation("");
+        setNotice("El estado del expediente se actualizó y quedó registrado en el historial.");
+      },
+      onError: (mutationError) => {
+        setError(getErrorMessage(mutationError, "No fue posible actualizar el estado del expediente."));
+      },
+    });
+  }
+
+  function openDetail(id: string) {
+    setError("");
+    setNotice("");
+    setNextStatus("");
+    setObservation("");
+    setSelectedId(id);
+  }
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">GESTIÓN OPERATIVA</p>
+      <div className="page-heading-row">
+        <div>
+          <h1 className="page-title">Expedientes funerarios</h1>
+          <p className="page-subtitle">Organiza los servicios confirmados, responsables y movimientos de cada expediente.</p>
+        </div>
+        <button className="primary-btn" type="button" onClick={() => { setError(""); setShowCreate(true); }}>
+          <Plus size={15} /> Nuevo expediente
+        </button>
+      </div>
+
+      {notice && <div className="success-banner" role="status">{notice}</div>}
+      {error && !showCreate && !selectedId && <div className="page-inline-error" role="alert">{error}</div>}
+
+      <div className="request-filters">
+        <label className="request-search">
+          <Search size={16} />
+          <input
+            aria-label="Buscar expedientes"
+            value={search}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+            placeholder="Buscar por expediente, solicitud, fallecido o contacto…"
+          />
+        </label>
+        <label className="request-status-filter">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {Object.entries(FUNERAL_STATUS_LABELS).map(([value, label]) =>
+              <option key={value} value={value}>{label}</option>
+            )}
+          </select>
+        </label>
+        <label className="request-status-filter">
+          <span>Personal asignado</span>
+          <select value={employeeFilter} onChange={(event) => { setEmployeeFilter(event.target.value); setPage(1); }}>
+            <option value="">Todo el personal</option>
+            {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="table-wrap">
+        <table className="employee-table request-table">
+          <thead><tr>
+            <th>Expediente</th>
+            <th>Fallecido</th>
+            <th>Contacto responsable</th>
+            <th>Personal asignado</th>
+            <th>Estado</th>
+            <th>Creación</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {listQuery.isLoading ? <tr><td colSpan={7}><div className="loading-state">Cargando expedientes…</div></td></tr>
+              : listQuery.isError ? <tr><td colSpan={7}><div className="error-state"><strong>No se pudieron cargar los expedientes.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="secondary-btn" onClick={() => listQuery.refetch()}>Reintentar</button></div></td></tr>
+              : cases.length === 0 ? <tr><td colSpan={7}><div className="empty-state"><strong>No hay expedientes para mostrar.</strong><p>Cuando conviertas una solicitud confirmada en expediente, aparecerá aquí.</p></div></td></tr>
+              : cases.map((item) => <tr key={item.id}>
+                <td><span className="request-reference-cell">{item.caseNumber}</span><small className="funeral-subline">Solicitud {item.serviceRequestReferenceCode}</small></td>
+                <td><strong>{item.deceasedFullName}</strong></td>
+                <td><div className="request-contact"><strong>{item.responsibleContactName}</strong><small>{item.responsibleContactPhone}</small></div></td>
+                <td>{item.assignedEmployeeName || <span className="muted-text">Sin asignar</span>}</td>
+                <td><span className={`pill request-status funeral-status-${item.status}`}>{FUNERAL_STATUS_LABELS[item.status]}</span></td>
+                <td>{formatRequestDate(new Date(item.createdAt).toISOString())}</td>
+                <td><button className="table-action" type="button" onClick={() => openDetail(item.id)}>Ver expediente</button></td>
+              </tr>)}
+          </tbody>
+        </table>
+      </div>
+
+      {pagination && <div className="request-pagination">
+        <span>{pagination.total} expediente(s) · Página {pagination.page} de {pagination.totalPages}</span>
+        <div>
+          <button className="secondary-btn" type="button" disabled={pagination.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</button>
+          <button className="secondary-btn" type="button" disabled={pagination.page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+        </div>
+      </div>}
+    </section>
+
+    {showCreate && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreate(); }}>
+      <form className="modal request-detail-modal funeral-modal" onSubmit={submitCreate}>
+        <div className="modal-head">
+          <div><p className="page-kicker">ALTA DE EXPEDIENTE</p><h2>Nuevo expediente</h2><p>El expediente se crea a partir de una solicitud que ya fue confirmada.</p></div>
+          <button className="icon-button" type="button" aria-label="Cerrar" onClick={closeCreate}><X size={16} /></button>
+        </div>
+
+        {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+        <div className="funeral-form-grid">
+          <label className="funeral-field funeral-field-full">Solicitud confirmada
+            <select required value={sourceRequestId} onChange={(event) => handleSourceRequestChange(event.target.value)}>
+              <option value="">Selecciona una solicitud</option>
+              {sourceRequests.map((request) => <option key={request.id} value={request.id}>{request.referenceCode} · {request.contactName} · {request.serviceType}</option>)}
+            </select>
+            {requestsQuery.isLoading && <small>Cargando solicitudes confirmadas…</small>}
+            {requestPagination && <small>{requestPagination.total} solicitudes confirmadas. Página {requestPagination.page} de {requestPagination.totalPages}.</small>}
+          </label>
+          {requestPagination && requestPagination.totalPages > 1 && <div className="funeral-source-pages">
+            <button className="secondary-btn" type="button" disabled={requestPage <= 1} onClick={() => setRequestPage((value) => Math.max(1, value - 1))}>Solicitudes anteriores</button>
+            <button className="secondary-btn" type="button" disabled={requestPage >= requestPagination.totalPages} onClick={() => setRequestPage((value) => value + 1)}>Más solicitudes</button>
+          </div>}
+
+          <label className="funeral-field funeral-field-full">Nombre completo del fallecido
+            <input required minLength={2} maxLength={160} value={deceasedName} onChange={(event) => setDeceasedName(event.target.value)} />
+          </label>
+          <label className="funeral-field">Fecha de fallecimiento <span>(opcional)</span>
+            <input type="date" value={dateOfDeath} onChange={(event) => setDateOfDeath(event.target.value)} />
+          </label>
+          <label className="funeral-field">Lugar del servicio <span>(opcional)</span>
+            <input maxLength={240} value={serviceLocation} onChange={(event) => setServiceLocation(event.target.value)} placeholder="Dirección o lugar" />
+          </label>
+          <label className="funeral-field">Contacto responsable
+            <input required minLength={2} maxLength={120} value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} />
+          </label>
+          <label className="funeral-field">Teléfono del responsable
+            <input required minLength={5} maxLength={30} value={responsiblePhone} onChange={(event) => setResponsiblePhone(event.target.value)} />
+          </label>
+          <label className="funeral-field funeral-field-full">Asignar a personal activo <span>(opcional)</span>
+            <select value={assignedEmployeeId} onChange={(event) => setAssignedEmployeeId(event.target.value)}>
+              <option value="">Sin asignar</option>
+              {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
+            </select>
+          </label>
+          <label className="funeral-field funeral-field-full">Notas internas <span>(opcional)</span>
+            <textarea rows={3} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Información operativa relevante para el equipo." />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button className="secondary-btn" type="button" onClick={closeCreate}>Cancelar</button>
+          <button className="primary-btn" type="submit" disabled={createCase.isPending || requestsQuery.isLoading || !sourceRequestId}>
+            {createCase.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+            {createCase.isPending ? "Creando…" : "Crear expediente"}
+          </button>
+        </div>
+      </form>
+    </div>}
+
+    {selectedId && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedId(null); }}>
+      <section className="modal request-detail-modal">
+        <div className="modal-head">
+          <div><p className="page-kicker">FICHA OPERATIVA</p><h2>{selectedCase?.caseNumber ?? "Expediente"}</h2><p>Solicitud relacionada: {selectedCase?.serviceRequestReferenceCode ?? "Cargando…"}</p></div>
+          <button className="icon-button" type="button" aria-label="Cerrar" onClick={() => setSelectedId(null)}><X size={16} /></button>
+        </div>
+
+        {detailQuery.isLoading ? <div className="loading-state">Cargando expediente…</div>
+          : detailQuery.isError || !selectedCase ? <div className="error-state"><strong>No se pudo cargar el expediente.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="secondary-btn" onClick={() => detailQuery.refetch()}>Reintentar</button></div>
+          : <>
+            <div className="funeral-detail-status">
+              <span className={`pill request-status funeral-status-${selectedCase.status}`}>{FUNERAL_STATUS_LABELS[selectedCase.status]}</span>
+              <span>Actualizado: {formatRequestDate(new Date(selectedCase.updatedAt).toISOString())}</span>
+            </div>
+            <div className="request-detail-grid">
+              <div><small>Fallecido</small><strong>{selectedCase.deceasedFullName}</strong></div>
+              <div><small>Fecha de fallecimiento</small><strong>{selectedCase.deceasedDateOfDeath ? formatRequestDate(new Date(selectedCase.deceasedDateOfDeath).toISOString()) : "No registrada"}</strong></div>
+              <div><small>Lugar del servicio</small><strong>{selectedCase.serviceLocation || "No especificado"}</strong></div>
+              <div><small>Personal asignado</small><strong>{selectedCase.assignedEmployeeName || "Sin asignar"}</strong></div>
+              <div><small>Contacto responsable</small><strong>{selectedCase.responsibleContactName}</strong></div>
+              <div><small>Teléfono responsable</small><strong>{selectedCase.responsibleContactPhone}</strong></div>
+              <div><small>Fecha de creación</small><strong>{formatRequestDate(new Date(selectedCase.createdAt).toISOString())}</strong></div>
+              <div><small>Identificador de solicitud</small><strong>{selectedCase.serviceRequestReferenceCode}</strong></div>
+            </div>
+            {selectedCase.notes && <div className="request-notes"><small>Notas internas</small><p>{selectedCase.notes}</p></div>}
+
+            <div className="request-history">
+              <h3><Clock3 size={16} /> Historial del expediente</h3>
+              {history.length === 0 ? <p className="request-history-empty">No hay movimientos registrados.</p>
+                : <ol>{history.map((entry) => <li key={entry.id}>
+                  <span className="request-history-dot" />
+                  <div>
+                    <strong>{entry.previousStatus ? `${FUNERAL_STATUS_LABELS[entry.previousStatus]} → ` : ""}{FUNERAL_STATUS_LABELS[entry.newStatus]}</strong>
+                    <small>{formatRequestDate(new Date(entry.createdAt).toISOString())} · {entry.changedByName}</small>
+                    {entry.observation && <p>{entry.observation}</p>}
+                  </div>
+                </li>)}</ol>}
+            </div>
+
+            {availableStatuses.length > 0 ? <form className="request-update-form" onSubmit={submitStatus}>
+              <h3>Registrar cambio de estado</h3>
+              <label>Nuevo estado
+                <select required value={nextStatus} onChange={(event) => setNextStatus(event.target.value as FuneralCaseStatusValue | "")}>
+                  <option value="">Selecciona el nuevo estado</option>
+                  {availableStatuses.map((status) => <option key={status} value={status}>{FUNERAL_STATUS_LABELS[status]}</option>)}
+                </select>
+              </label>
+              <label>Observación <span>(opcional)</span>
+                <textarea rows={3} maxLength={1000} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Describe el motivo o detalle del cambio." />
+              </label>
+              <button className="primary-btn" type="submit" disabled={!nextStatus || updateStatus.isPending}>
+                {updateStatus.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+                {updateStatus.isPending ? "Guardando…" : "Guardar cambio"}
+              </button>
+            </form> : <p className="request-terminal-note">Este expediente tiene un estado terminal y no admite más cambios.</p>}
+          </>}
+      </section>
+    </div>}
+  </WorkspaceShell>;
+}
+
+function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
+  if (session.user.mustChangePassword) {
+    return <Redirect to="/change-password" />;
+  }
+  if (adminOnly && session.user.role !== "administrador") {
+    return <Redirect to="/app" />;
+  }
+  return children;
+}
+
+function AppRoutes() {
+  const [location] = useLocation();
+  const sessionQuery = useGetAuthSession({ query: { queryKey: getGetAuthSessionQueryKey(), retry: false } });
+  if (location === "/") return <PublicHomePage />;
+  if (location === "/solicitar-servicio") return <PublicServiceRequest />;
+  if (location === "/consultar-solicitud") return <PublicRequestLookup />;
+  const unauthorized = isUnauthorized(sessionQuery.error);
+  const session = unauthorized ? undefined : sessionQuery.data;
+  if (sessionQuery.isLoading) return <AuthLoading />;
+  if (sessionQuery.isError && !unauthorized) {
+    return <div className="auth-layout"><AuthAside /><main className="auth-main"><section className="auth-card">
+      <span className="state-symbol"><AlertCircle size={17} /></span><h2>No pudimos confirmar tu sesión.</h2><p className="auth-intro">Revisa tu conexión y vuelve a intentarlo.</p>
+      <button className="primary-btn" data-testid="button-retry-session" onClick={() => sessionQuery.refetch()}><RefreshCw size={15} /> Reintentar</button>
+    </section></main></div>;
+  }
+  return <Switch>
+    <Route path="/personal"><SignIn session={session} /></Route>
+    <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
+    <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/service-requests">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/funeral-cases">{session ? <ProtectedRoute session={session} adminOnly><AdminFuneralCases session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route component={NotFound} />
+  </Switch>;
+}
+
+function App() {
+  return <QueryClientProvider client={queryClient}><div className="app-root"><AppRoutes /></div></QueryClientProvider>;
+}
+
+export default App;

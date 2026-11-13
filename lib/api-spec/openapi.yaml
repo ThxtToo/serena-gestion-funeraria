@@ -21,6 +21,8 @@ tags:
     description: Serena staff authentication and session management
   - name: employee-administration
     description: Administrator-only employee account management
+  - name: funeral-case-administration
+    description: Administrator-only funeral case management
 
 paths:
   /healthz:
@@ -104,6 +106,374 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "500":
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+
+  /admin/funeral-cases:
+    get:
+      operationId: listAdminFuneralCases
+      tags: [funeral-case-administration]
+      summary: List funeral cases for administrators
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/FuneralCaseStatusValue"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: assignedEmployeeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated funeral case list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+    post:
+      operationId: createAdminFuneralCase
+      tags: [funeral-case-administration]
+      summary: Create a funeral case from a confirmed service request
+      description: Creates at most one funeral case per confirmed service request and records its initial status history.
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFuneralCaseInput"
+      responses:
+        "201":
+          description: Funeral case created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseDetail"
+        "400":
+          description: Invalid funeral case data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Service request or employee not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Request is not confirmed or already has a funeral case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/funeral-cases/{caseId}:
+    get:
+      operationId: getAdminFuneralCase
+      tags: [funeral-case-administration]
+      summary: Get funeral case details and status history
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Funeral case details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseDetail"
+        "400":
+          description: Invalid case ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Funeral case not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/funeral-cases/{caseId}/status:
+    patch:
+      operationId: updateAdminFuneralCaseStatus
+      tags: [funeral-case-administration]
+      summary: Change funeral case status and record an observation
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFuneralCaseStatusInput"
+      responses:
+        "200":
+          description: Funeral case status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseDetail"
+        "400":
+          description: Invalid status transition or request data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Funeral case not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /employee/funeral-cases:
+    get:
+      operationId: listEmployeeFuneralCases
+      tags: [employee-funeral-cases]
+      summary: List funeral cases assigned to the authenticated employee
+      description: Returns only funeral cases assigned to the authenticated employee.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/FuneralCaseStatusValue"
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of the employee's assigned funeral cases
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseList"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Employee role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /employee/funeral-cases/{caseId}:
+    get:
+      operationId: getEmployeeFuneralCase
+      tags: [employee-funeral-cases]
+      summary: Get an assigned funeral case and its status history
+      description: Employees can only access cases assigned to their own account.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Funeral case details and status history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseDetail"
+        "400":
+          description: Invalid case ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Employee role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Assigned funeral case not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /employee/funeral-cases/{caseId}/status:
+    patch:
+      operationId: updateEmployeeFuneralCaseStatus
+      tags: [employee-funeral-cases]
+      summary: Advance the status of an assigned funeral case
+      description: Employees may advance their assigned cases but cannot cancel them or modify cases assigned to others.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFuneralCaseStatusInput"
+      responses:
+        "200":
+          description: Funeral case status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFuneralCaseDetail"
+        "400":
+          description: Invalid case ID or request data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Employee role required or invalid request origin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Assigned funeral case not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Invalid employee status transition
           content:
             application/json:
               schema:
@@ -830,6 +1200,187 @@ components:
           items:
             $ref: "#/components/schemas/ServiceRequestStatusHistoryEntry"
       required: [serviceRequest, history]
+
+
+    FuneralCaseStatusValue:
+      type: string
+      enum: [abierto, en_preparacion, programado, en_ejecucion, finalizado, cancelado]
+
+    CreateFuneralCaseInput:
+      type: object
+      additionalProperties: false
+      properties:
+        serviceRequestId:
+          type: string
+          format: uuid
+        deceasedFullName:
+          type: string
+          minLength: 2
+          maxLength: 160
+        deceasedDateOfDeath:
+          type: string
+          format: date-time
+        serviceLocation:
+          type: string
+          maxLength: 240
+        responsibleContactName:
+          type: string
+          minLength: 2
+          maxLength: 120
+        responsibleContactPhone:
+          type: string
+          minLength: 5
+          maxLength: 30
+        assignedEmployeeId:
+          type: string
+          format: uuid
+        notes:
+          type: string
+          maxLength: 2000
+      required:
+        - serviceRequestId
+        - deceasedFullName
+        - responsibleContactName
+        - responsibleContactPhone
+
+    UpdateFuneralCaseStatusInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          $ref: "#/components/schemas/FuneralCaseStatusValue"
+        observation:
+          type: string
+          maxLength: 1000
+      required: [status]
+
+    AdminFuneralCase:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        caseNumber:
+          type: string
+        serviceRequestId:
+          type: string
+          format: uuid
+        serviceRequestReferenceCode:
+          type: string
+        deceasedFullName:
+          type: string
+        deceasedDateOfDeath:
+          oneOf:
+            - type: string
+              format: date-time
+            - type: "null"
+        serviceLocation:
+          oneOf:
+            - type: string
+            - type: "null"
+        responsibleContactName:
+          type: string
+        responsibleContactPhone:
+          type: string
+        assignedEmployeeId:
+          oneOf:
+            - type: string
+              format: uuid
+            - type: "null"
+        assignedEmployeeName:
+          oneOf:
+            - type: string
+            - type: "null"
+        status:
+          $ref: "#/components/schemas/FuneralCaseStatusValue"
+        notes:
+          oneOf:
+            - type: string
+            - type: "null"
+        createdByUserId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - caseNumber
+        - serviceRequestId
+        - serviceRequestReferenceCode
+        - deceasedFullName
+        - deceasedDateOfDeath
+        - serviceLocation
+        - responsibleContactName
+        - responsibleContactPhone
+        - assignedEmployeeId
+        - assignedEmployeeName
+        - status
+        - notes
+        - createdByUserId
+        - createdAt
+        - updatedAt
+
+    FuneralCaseStatusHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        previousStatus:
+          oneOf:
+            - $ref: "#/components/schemas/FuneralCaseStatusValue"
+            - type: "null"
+        newStatus:
+          $ref: "#/components/schemas/FuneralCaseStatusValue"
+        changedByUserId:
+          type: string
+          format: uuid
+        changedByName:
+          type: string
+        observation:
+          oneOf:
+            - type: string
+            - type: "null"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, previousStatus, newStatus, changedByUserId, changedByName, observation, createdAt]
+
+    AdminFuneralCaseList:
+      type: object
+      properties:
+        funeralCases:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFuneralCase"
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            totalPages:
+              type: integer
+          required: [page, limit, total, totalPages]
+      required: [funeralCases, pagination]
+
+    AdminFuneralCaseDetail:
+      type: object
+      properties:
+        funeralCase:
+          $ref: "#/components/schemas/AdminFuneralCase"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/FuneralCaseStatusHistoryEntry"
+      required: [funeralCase, history]
 
     AuthenticatedUser:
       type: object

@@ -5,7 +5,7 @@ import {
   AlertCircle, ArrowRight, Check, CheckCircle2, Clipboard, DoorOpen, Eye, EyeOff,
   KeyRound, LockKeyhole, RefreshCw, ShieldCheck, UserPlus, Users, UserRound,
   BookOpen, Plus, Pencil, Power, Send, CalendarDays,
-  ClipboardList, Search, X, Clock3,
+  ClipboardList, Search, X, Clock3, FileText,
 } from "lucide-react";
 import {
   getGetAuthSessionQueryKey, getListEmployeesQueryKey,
@@ -17,11 +17,18 @@ import {
   getListAdminServiceRequestsQueryKey, getGetAdminServiceRequestQueryKey,
   useListAdminServiceRequests, useGetAdminServiceRequest,
   useUpdateAdminServiceRequestStatus,
+  getListAdminFuneralCasesQueryKey, getGetAdminFuneralCaseQueryKey,
+  useListAdminFuneralCases, useGetAdminFuneralCase,
+  useCreateAdminFuneralCase, useUpdateAdminFuneralCaseStatus,
+  getListEmployeeFuneralCasesQueryKey, getGetEmployeeFuneralCaseQueryKey,
+  useListEmployeeFuneralCases, useGetEmployeeFuneralCase,
+  useUpdateEmployeeFuneralCaseStatus,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
   ServiceOffering, ServiceRequestCreated,
-  ServiceRequestStatusValue,
+  ServiceRequestStatusValue, FuneralCaseStatusValue,
+  CreateFuneralCaseInput,
 } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
@@ -217,10 +224,12 @@ function WorkspaceShell({ session, children }: { session: AuthenticatedSession; 
       <nav aria-label="Navegación del espacio">
         <div className="nav-label">Espacio de trabajo</div>
         <Link href="/app" className={`side-link ${location === "/app" ? "active" : ""}`} data-testid="link-workspace-home"><UserRound size={16} /><span>Inicio</span></Link>
+        {!isAdmin && <Link href="/mi-trabajo" className={`side-link ${location === "/mi-trabajo" ? "active" : ""}`} data-testid="link-employee-work"><ClipboardList size={16} /><span>Mi trabajo</span></Link>}
         {isAdmin && <>
           <Link href="/admin/users" className={`side-link ${location === "/admin/users" ? "active" : ""}`} data-testid="link-admin-users"><Users size={16} /><span>Cuentas de equipo</span></Link>
           <Link href="/admin/service-offerings" className={`side-link ${location === "/admin/service-offerings" ? "active" : ""}`} data-testid="link-admin-service-offerings"><BookOpen size={16} /><span>Catálogo de servicios</span></Link>
           <Link href="/admin/service-requests" className={`side-link ${location === "/admin/service-requests" ? "active" : ""}`} data-testid="link-admin-service-requests"><ClipboardList size={16} /><span>Solicitudes</span></Link>
+          <Link href="/admin/funeral-cases" className={`side-link ${location === "/admin/funeral-cases" ? "active" : ""}`} data-testid="link-admin-funeral-cases"><FileText size={16} /><span>Expedientes</span></Link>
         </>}
       </nav>
       <div className="sidebar-bottom">
@@ -1010,37 +1019,11 @@ function AdminServiceRequests({ session }: { session: AuthenticatedSession }) {
       </div>
 
       {listQuery.isLoading ? <div className="loading-state">Cargando solicitudes…</div>
-      : listQuery.isError ? <>
-          <div className="success-banner demo-mode-banner" role="status">
-            VISTA DE DEMOSTRACIÓN · Datos ficticios, no guardados en el sistema.
-          </div>
-          <div className="table-wrap">
-            <table className="employee-table request-table">
-              <thead><tr>
-                <th>Referencia</th><th>Contacto</th><th>Servicio</th><th>Fecha solicitada</th><th>Estado</th><th>Detalle</th>
-              </tr></thead>
-              <tbody>
-                <tr>
-                  <td><strong className="request-reference-cell">SER-DEMO-001</strong></td>
-                  <td><span className="request-contact"><strong>María Fernanda López</strong><small>0412-555-0182</small></span></td>
-                  <td>Servicio funerario integral</td>
-                  <td>05/11/2026</td>
-                  <td><span className="pill request-status status-pendiente">Pendiente</span></td>
-                  <td><span className="catalog-count">Ejemplo</span></td>
-                </tr>
-                <tr>
-                  <td><strong className="request-reference-cell">SER-DEMO-002</strong></td>
-                  <td><span className="request-contact"><strong>Carlos Eduardo Ramírez</strong><small>0414-555-0276</small></span></td>
-                  <td>Cremación</td>
-                  <td>07/11/2026</td>
-                  <td><span className="pill request-status status-en_revision">En revisión</span></td>
-                  <td><span className="catalog-count">Ejemplo</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="page-subtitle">La conexión con el servidor está pendiente. Los datos de esta tabla son únicamente ilustrativos.</p>
-        </>
+      : listQuery.isError ? <div className="error-state">
+          <strong>No pudimos cargar las solicitudes.</strong>
+          <p>Comprueba tu sesión y vuelve a intentarlo.</p>
+          <button className="quiet-btn" type="button" onClick={() => listQuery.refetch()}>Reintentar</button>
+        </div>
       : requests.length === 0 ? <div className="empty-state">
           <strong>No hay solicitudes para mostrar</strong>
           <p>Cuando se reciban solicitudes, aparecerán en este listado.</p>
@@ -1144,11 +1127,608 @@ function AdminServiceRequests({ session }: { session: AuthenticatedSession }) {
   </WorkspaceShell>;
 }
 
-function ProtectedRoute({ session, children, adminOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean }) {
+
+const FUNERAL_STATUS_LABELS: Record<FuneralCaseStatusValue, string> = {
+  abierto: "Abierto",
+  en_preparacion: "En preparación",
+  programado: "Programado",
+  en_ejecucion: "En ejecución",
+  finalizado: "Finalizado",
+  cancelado: "Cancelado",
+};
+
+const NEXT_FUNERAL_STATUSES: Record<FuneralCaseStatusValue, FuneralCaseStatusValue[]> = {
+  abierto: ["en_preparacion", "programado", "cancelado"],
+  en_preparacion: ["programado", "en_ejecucion", "cancelado"],
+  programado: ["en_preparacion", "en_ejecucion", "cancelado"],
+  en_ejecucion: ["finalizado", "cancelado"],
+  finalizado: [],
+  cancelado: [],
+};
+
+function AdminFuneralCases({ session }: { session: AuthenticatedSession }) {
+  const client = useQueryClient();
+  const [statusFilter, setStatusFilter] = useState("");
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [requestPage, setRequestPage] = useState(1);
+  const [sourceRequestId, setSourceRequestId] = useState("");
+  const [deceasedName, setDeceasedName] = useState("");
+  const [dateOfDeath, setDateOfDeath] = useState("");
+  const [serviceLocation, setServiceLocation] = useState("");
+  const [responsibleName, setResponsibleName] = useState("");
+  const [responsiblePhone, setResponsiblePhone] = useState("");
+  const [assignedEmployeeId, setAssignedEmployeeId] = useState("");
+  const [notes, setNotes] = useState("");
+  const [nextStatus, setNextStatus] = useState<FuneralCaseStatusValue | "">("");
+  const [observation, setObservation] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const listQuery = useListAdminFuneralCases({
+    status: statusFilter ? statusFilter as FuneralCaseStatusValue : undefined,
+    assignedEmployeeId: employeeFilter || undefined,
+    search: search.trim() || undefined,
+    page,
+    limit: 20,
+  });
+
+  const detailQuery = useGetAdminFuneralCase(selectedId ?? "", {
+    query: { enabled: Boolean(selectedId) },
+  });
+
+  const employeesQuery = useListEmployees();
+  const requestsQuery = useListAdminServiceRequests({
+    status: "confirmada",
+    page: requestPage,
+    limit: 100,
+  });
+
+  const createCase = useCreateAdminFuneralCase();
+  const updateStatus = useUpdateAdminFuneralCaseStatus();
+
+  const cases = listQuery.data?.funeralCases ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedCase = detailQuery.data?.funeralCase;
+  const history = detailQuery.data?.history ?? [];
+  const sourceRequests = requestsQuery.data?.serviceRequests ?? [];
+  const requestPagination = requestsQuery.data?.pagination;
+  const employees = (employeesQuery.data?.employees ?? []).filter(
+    (employee) => employee.role === "empleado" && employee.isActive,
+  );
+  const availableStatuses = selectedCase
+    ? NEXT_FUNERAL_STATUSES[selectedCase.status]
+    : [];
+
+  function resetCreateForm() {
+    setSourceRequestId("");
+    setDeceasedName("");
+    setDateOfDeath("");
+    setServiceLocation("");
+    setResponsibleName("");
+    setResponsiblePhone("");
+    setAssignedEmployeeId("");
+    setNotes("");
+    setRequestPage(1);
+  }
+
+  function closeCreate() {
+    setShowCreate(false);
+    setError("");
+    resetCreateForm();
+  }
+
+  function handleSourceRequestChange(id: string) {
+    setSourceRequestId(id);
+    const request = sourceRequests.find((item) => item.id === id);
+    if (request) {
+      setResponsibleName(request.contactName);
+      setResponsiblePhone(request.contactPhone);
+    }
+  }
+
+  function submitCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+
+    if (!sourceRequestId) {
+      setError("Selecciona una solicitud confirmada.");
+      return;
+    }
+
+    const payload: CreateFuneralCaseInput = {
+      serviceRequestId: sourceRequestId,
+      deceasedFullName: deceasedName.trim(),
+      ...(dateOfDeath ? { deceasedDateOfDeath: new Date(`${dateOfDeath}T12:00:00`).toISOString() } : {}),
+      ...(serviceLocation.trim() ? { serviceLocation: serviceLocation.trim() } : {}),
+      responsibleContactName: responsibleName.trim(),
+      responsibleContactPhone: responsiblePhone.trim(),
+      ...(assignedEmployeeId ? { assignedEmployeeId } : {}),
+      ...(notes.trim() ? { notes: notes.trim() } : {}),
+    };
+
+    createCase.mutate({ data: payload }, {
+      onSuccess: async (result) => {
+        await client.invalidateQueries({ queryKey: getListAdminFuneralCasesQueryKey() });
+        closeCreate();
+        setSelectedId(result.funeralCase.id);
+        setNotice(`Expediente ${result.funeralCase.caseNumber} creado correctamente.`);
+      },
+      onError: (mutationError) => {
+        setError(getErrorMessage(mutationError, "No fue posible crear el expediente. Verifica que la solicitud siga confirmada y no tenga un expediente asociado."));
+      },
+    });
+  }
+
+  function submitStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedId || !nextStatus) return;
+    setError("");
+    setNotice("");
+
+    updateStatus.mutate({
+      caseId: selectedId,
+      data: {
+        status: nextStatus,
+        observation: observation.trim() || undefined,
+      },
+    }, {
+      onSuccess: async () => {
+        await Promise.all([
+          client.invalidateQueries({ queryKey: getListAdminFuneralCasesQueryKey() }),
+          client.invalidateQueries({ queryKey: getGetAdminFuneralCaseQueryKey(selectedId) }),
+        ]);
+        setNextStatus("");
+        setObservation("");
+        setNotice("El estado del expediente se actualizó y quedó registrado en el historial.");
+      },
+      onError: (mutationError) => {
+        setError(getErrorMessage(mutationError, "No fue posible actualizar el estado del expediente."));
+      },
+    });
+  }
+
+  function openDetail(id: string) {
+    setError("");
+    setNotice("");
+    setNextStatus("");
+    setObservation("");
+    setSelectedId(id);
+  }
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">GESTIÓN OPERATIVA</p>
+      <div className="page-heading-row">
+        <div>
+          <h1 className="page-title">Expedientes funerarios</h1>
+          <p className="page-subtitle">Organiza los servicios confirmados, responsables y movimientos de cada expediente.</p>
+        </div>
+        <button className="primary-btn" type="button" onClick={() => { setError(""); setShowCreate(true); }}>
+          <Plus size={15} /> Nuevo expediente
+        </button>
+      </div>
+
+      {notice && <div className="success-banner" role="status">{notice}</div>}
+      {error && !showCreate && !selectedId && <div className="page-inline-error" role="alert">{error}</div>}
+
+      <div className="request-filters">
+        <label className="request-search">
+          <Search size={16} />
+          <input
+            aria-label="Buscar expedientes"
+            value={search}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+            placeholder="Buscar por expediente, solicitud, fallecido o contacto…"
+          />
+        </label>
+        <label className="request-status-filter">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {Object.entries(FUNERAL_STATUS_LABELS).map(([value, label]) =>
+              <option key={value} value={value}>{label}</option>
+            )}
+          </select>
+        </label>
+        <label className="request-status-filter">
+          <span>Personal asignado</span>
+          <select value={employeeFilter} onChange={(event) => { setEmployeeFilter(event.target.value); setPage(1); }}>
+            <option value="">Todo el personal</option>
+            {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
+          </select>
+        </label>
+      </div>
+
+      <div className="table-wrap">
+        <table className="employee-table request-table">
+          <thead><tr>
+            <th>Expediente</th>
+            <th>Fallecido</th>
+            <th>Contacto responsable</th>
+            <th>Personal asignado</th>
+            <th>Estado</th>
+            <th>Creación</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {listQuery.isLoading ? <tr><td colSpan={7}><div className="loading-state">Cargando expedientes…</div></td></tr>
+              : listQuery.isError ? <tr><td colSpan={7}><div className="error-state"><strong>No se pudieron cargar los expedientes.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="secondary-btn" onClick={() => listQuery.refetch()}>Reintentar</button></div></td></tr>
+              : cases.length === 0 ? <tr><td colSpan={7}><div className="empty-state"><strong>No hay expedientes para mostrar.</strong><p>Cuando conviertas una solicitud confirmada en expediente, aparecerá aquí.</p></div></td></tr>
+              : cases.map((item) => <tr key={item.id}>
+                <td><span className="request-reference-cell">{item.caseNumber}</span><small className="funeral-subline">Solicitud {item.serviceRequestReferenceCode}</small></td>
+                <td><strong>{item.deceasedFullName}</strong></td>
+                <td><div className="request-contact"><strong>{item.responsibleContactName}</strong><small>{item.responsibleContactPhone}</small></div></td>
+                <td>{item.assignedEmployeeName || <span className="muted-text">Sin asignar</span>}</td>
+                <td><span className={`pill request-status funeral-status-${item.status}`}>{FUNERAL_STATUS_LABELS[item.status]}</span></td>
+                <td>{formatRequestDate(new Date(item.createdAt).toISOString())}</td>
+                <td><button className="table-action" type="button" onClick={() => openDetail(item.id)}>Ver expediente</button></td>
+              </tr>)}
+          </tbody>
+        </table>
+      </div>
+
+      {pagination && <div className="request-pagination">
+        <span>{pagination.total} expediente(s) · Página {pagination.page} de {pagination.totalPages}</span>
+        <div>
+          <button className="secondary-btn" type="button" disabled={pagination.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</button>
+          <button className="secondary-btn" type="button" disabled={pagination.page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+        </div>
+      </div>}
+    </section>
+
+    {showCreate && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) closeCreate(); }}>
+      <form className="modal request-detail-modal funeral-modal" onSubmit={submitCreate}>
+        <div className="modal-head">
+          <div><p className="page-kicker">ALTA DE EXPEDIENTE</p><h2>Nuevo expediente</h2><p>El expediente se crea a partir de una solicitud que ya fue confirmada.</p></div>
+          <button className="icon-button" type="button" aria-label="Cerrar" onClick={closeCreate}><X size={16} /></button>
+        </div>
+
+        {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+        <div className="funeral-form-grid">
+          <label className="funeral-field funeral-field-full">Solicitud confirmada
+            <select required value={sourceRequestId} onChange={(event) => handleSourceRequestChange(event.target.value)}>
+              <option value="">Selecciona una solicitud</option>
+              {sourceRequests.map((request) => <option key={request.id} value={request.id}>{request.referenceCode} · {request.contactName} · {request.serviceType}</option>)}
+            </select>
+            {requestsQuery.isLoading && <small>Cargando solicitudes confirmadas…</small>}
+            {requestPagination && <small>{requestPagination.total} solicitudes confirmadas. Página {requestPagination.page} de {requestPagination.totalPages}.</small>}
+          </label>
+          {requestPagination && requestPagination.totalPages > 1 && <div className="funeral-source-pages">
+            <button className="secondary-btn" type="button" disabled={requestPage <= 1} onClick={() => setRequestPage((value) => Math.max(1, value - 1))}>Solicitudes anteriores</button>
+            <button className="secondary-btn" type="button" disabled={requestPage >= requestPagination.totalPages} onClick={() => setRequestPage((value) => value + 1)}>Más solicitudes</button>
+          </div>}
+
+          <label className="funeral-field funeral-field-full">Nombre completo del fallecido
+            <input required minLength={2} maxLength={160} value={deceasedName} onChange={(event) => setDeceasedName(event.target.value)} />
+          </label>
+          <label className="funeral-field">Fecha de fallecimiento <span>(opcional)</span>
+            <input type="date" value={dateOfDeath} onChange={(event) => setDateOfDeath(event.target.value)} />
+          </label>
+          <label className="funeral-field">Lugar del servicio <span>(opcional)</span>
+            <input maxLength={240} value={serviceLocation} onChange={(event) => setServiceLocation(event.target.value)} placeholder="Dirección o lugar" />
+          </label>
+          <label className="funeral-field">Contacto responsable
+            <input required minLength={2} maxLength={120} value={responsibleName} onChange={(event) => setResponsibleName(event.target.value)} />
+          </label>
+          <label className="funeral-field">Teléfono del responsable
+            <input required minLength={5} maxLength={30} value={responsiblePhone} onChange={(event) => setResponsiblePhone(event.target.value)} />
+          </label>
+          <label className="funeral-field funeral-field-full">Asignar a personal activo <span>(opcional)</span>
+            <select value={assignedEmployeeId} onChange={(event) => setAssignedEmployeeId(event.target.value)}>
+              <option value="">Sin asignar</option>
+              {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
+            </select>
+          </label>
+          <label className="funeral-field funeral-field-full">Notas internas <span>(opcional)</span>
+            <textarea rows={3} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Información operativa relevante para el equipo." />
+          </label>
+        </div>
+        <div className="modal-actions">
+          <button className="secondary-btn" type="button" onClick={closeCreate}>Cancelar</button>
+          <button className="primary-btn" type="submit" disabled={createCase.isPending || requestsQuery.isLoading || !sourceRequestId}>
+            {createCase.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+            {createCase.isPending ? "Creando…" : "Crear expediente"}
+          </button>
+        </div>
+      </form>
+    </div>}
+
+    {selectedId && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedId(null); }}>
+      <section className="modal request-detail-modal">
+        <div className="modal-head">
+          <div><p className="page-kicker">FICHA OPERATIVA</p><h2>{selectedCase?.caseNumber ?? "Expediente"}</h2><p>Solicitud relacionada: {selectedCase?.serviceRequestReferenceCode ?? "Cargando…"}</p></div>
+          <button className="icon-button" type="button" aria-label="Cerrar" onClick={() => setSelectedId(null)}><X size={16} /></button>
+        </div>
+
+        {detailQuery.isLoading ? <div className="loading-state">Cargando expediente…</div>
+          : detailQuery.isError || !selectedCase ? <div className="error-state"><strong>No se pudo cargar el expediente.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="secondary-btn" onClick={() => detailQuery.refetch()}>Reintentar</button></div>
+          : <>
+            <div className="funeral-detail-status">
+              <span className={`pill request-status funeral-status-${selectedCase.status}`}>{FUNERAL_STATUS_LABELS[selectedCase.status]}</span>
+              <span>Actualizado: {formatRequestDate(new Date(selectedCase.updatedAt).toISOString())}</span>
+            </div>
+            <div className="request-detail-grid">
+              <div><small>Fallecido</small><strong>{selectedCase.deceasedFullName}</strong></div>
+              <div><small>Fecha de fallecimiento</small><strong>{selectedCase.deceasedDateOfDeath ? formatRequestDate(new Date(selectedCase.deceasedDateOfDeath).toISOString()) : "No registrada"}</strong></div>
+              <div><small>Lugar del servicio</small><strong>{selectedCase.serviceLocation || "No especificado"}</strong></div>
+              <div><small>Personal asignado</small><strong>{selectedCase.assignedEmployeeName || "Sin asignar"}</strong></div>
+              <div><small>Contacto responsable</small><strong>{selectedCase.responsibleContactName}</strong></div>
+              <div><small>Teléfono responsable</small><strong>{selectedCase.responsibleContactPhone}</strong></div>
+              <div><small>Fecha de creación</small><strong>{formatRequestDate(new Date(selectedCase.createdAt).toISOString())}</strong></div>
+              <div><small>Identificador de solicitud</small><strong>{selectedCase.serviceRequestReferenceCode}</strong></div>
+            </div>
+            {selectedCase.notes && <div className="request-notes"><small>Notas internas</small><p>{selectedCase.notes}</p></div>}
+
+            <div className="request-history">
+              <h3><Clock3 size={16} /> Historial del expediente</h3>
+              {history.length === 0 ? <p className="request-history-empty">No hay movimientos registrados.</p>
+                : <ol>{history.map((entry) => <li key={entry.id}>
+                  <span className="request-history-dot" />
+                  <div>
+                    <strong>{entry.previousStatus ? `${FUNERAL_STATUS_LABELS[entry.previousStatus]} → ` : ""}{FUNERAL_STATUS_LABELS[entry.newStatus]}</strong>
+                    <small>{formatRequestDate(new Date(entry.createdAt).toISOString())} · {entry.changedByName}</small>
+                    {entry.observation && <p>{entry.observation}</p>}
+                  </div>
+                </li>)}</ol>}
+            </div>
+
+            {availableStatuses.length > 0 ? <form className="request-update-form" onSubmit={submitStatus}>
+              <h3>Registrar cambio de estado</h3>
+              <label>Nuevo estado
+                <select required value={nextStatus} onChange={(event) => setNextStatus(event.target.value as FuneralCaseStatusValue | "")}>
+                  <option value="">Selecciona el nuevo estado</option>
+                  {availableStatuses.map((status) => <option key={status} value={status}>{FUNERAL_STATUS_LABELS[status]}</option>)}
+                </select>
+              </label>
+              <label>Observación <span>(opcional)</span>
+                <textarea rows={3} maxLength={1000} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Describe el motivo o detalle del cambio." />
+              </label>
+              <button className="primary-btn" type="submit" disabled={!nextStatus || updateStatus.isPending}>
+                {updateStatus.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+                {updateStatus.isPending ? "Guardando…" : "Guardar cambio"}
+              </button>
+            </form> : <p className="request-terminal-note">Este expediente tiene un estado terminal y no admite más cambios.</p>}
+          </>}
+      </section>
+    </div>}
+  </WorkspaceShell>;
+}
+
+const EMPLOYEE_FUNERAL_TRANSITIONS: Record<FuneralCaseStatusValue, FuneralCaseStatusValue[]> = {
+  abierto: ["en_preparacion"],
+  en_preparacion: ["programado", "en_ejecucion"],
+  programado: ["en_preparacion", "en_ejecucion"],
+  en_ejecucion: ["finalizado"],
+  finalizado: [],
+  cancelado: [],
+};
+
+function EmployeeFuneralCases({ session }: { session: AuthenticatedSession }) {
+  const client = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [nextStatus, setNextStatus] = useState<FuneralCaseStatusValue | "">("");
+  const [observation, setObservation] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  const listQuery = useListEmployeeFuneralCases({
+    search: search.trim() || undefined,
+    status: statusFilter ? statusFilter as FuneralCaseStatusValue : undefined,
+    page,
+    limit: 20,
+  });
+
+  const detailQuery = useGetEmployeeFuneralCase(selectedId ?? "", {
+    query: { enabled: Boolean(selectedId) },
+  });
+
+  const updateStatus = useUpdateEmployeeFuneralCaseStatus();
+  const cases = listQuery.data?.funeralCases ?? [];
+  const pagination = listQuery.data?.pagination;
+  const selectedCase = detailQuery.data?.funeralCase;
+  const history = detailQuery.data?.history ?? [];
+  const availableStatuses = selectedCase
+    ? EMPLOYEE_FUNERAL_TRANSITIONS[selectedCase.status]
+    : [];
+
+  function openDetail(id: string) {
+    setError("");
+    setNotice("");
+    setNextStatus("");
+    setObservation("");
+    setSelectedId(id);
+  }
+
+  function submitStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selectedId || !nextStatus) return;
+
+    setError("");
+    setNotice("");
+
+    updateStatus.mutate({
+      caseId: selectedId,
+      data: {
+        status: nextStatus,
+        observation: observation.trim() || undefined,
+      },
+    }, {
+      onSuccess: async () => {
+        await Promise.all([
+          client.invalidateQueries({ queryKey: getListEmployeeFuneralCasesQueryKey() }),
+          client.invalidateQueries({ queryKey: getGetEmployeeFuneralCaseQueryKey(selectedId) }),
+        ]);
+        setNextStatus("");
+        setObservation("");
+        setNotice("El avance del expediente quedó registrado en el historial.");
+      },
+      onError: (mutationError) => {
+        setError(getErrorMessage(mutationError, "No fue posible actualizar el expediente. Comprueba que siga asignado a tu cuenta."));
+      },
+    });
+  }
+
+  return <WorkspaceShell session={session}>
+    <section className="page-content">
+      <p className="page-kicker">GESTIÓN PERSONAL</p>
+      <div className="page-heading-row">
+        <div>
+          <h1 className="page-title">Mi trabajo</h1>
+          <p className="page-subtitle">Consulta los expedientes que tienes asignados y registra el avance de cada servicio.</p>
+        </div>
+      </div>
+
+      {notice && <div className="success-banner" role="status">{notice}</div>}
+      {error && !selectedId && <div className="page-inline-error" role="alert">{error}</div>}
+
+      <div className="request-filters">
+        <label className="request-search">
+          <Search size={16} />
+          <input
+            aria-label="Buscar mis expedientes"
+            value={search}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
+            placeholder="Buscar por número, fallecido o contacto…"
+          />
+        </label>
+        <label className="request-status-filter">
+          <span>Estado</span>
+          <select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}>
+            <option value="">Todos los estados</option>
+            {Object.entries(FUNERAL_STATUS_LABELS).map(([value, label]) =>
+              <option key={value} value={value}>{label}</option>
+            )}
+          </select>
+        </label>
+      </div>
+
+      <div className="table-wrap">
+        <table className="employee-table request-table">
+          <thead><tr>
+            <th>Expediente</th>
+            <th>Fallecido</th>
+            <th>Contacto responsable</th>
+            <th>Estado</th>
+            <th>Creación</th>
+            <th></th>
+          </tr></thead>
+          <tbody>
+            {listQuery.isLoading
+              ? <tr><td colSpan={6}><div className="loading-state">Cargando tus expedientes…</div></td></tr>
+              : listQuery.isError
+                ? <tr><td colSpan={6}><div className="error-state"><strong>No se pudieron cargar tus expedientes.</strong><p>Comprueba tu conexión e inténtalo de nuevo.</p><button className="secondary-btn" type="button" onClick={() => listQuery.refetch()}>Reintentar</button></div></td></tr>
+                : cases.length === 0
+                  ? <tr><td colSpan={6}><div className="empty-state"><strong>No tienes expedientes asignados con estos criterios.</strong><p>Cuando administración te asigne un expediente, aparecerá en esta sección.</p></div></td></tr>
+                  : cases.map((item) => <tr key={item.id}>
+                    <td><span className="request-reference-cell">{item.caseNumber}</span><small className="funeral-subline">Solicitud {item.serviceRequestReferenceCode}</small></td>
+                    <td><strong>{item.deceasedFullName}</strong></td>
+                    <td><div className="request-contact"><strong>{item.responsibleContactName}</strong><small>{item.responsibleContactPhone}</small></div></td>
+                    <td><span className={`pill request-status funeral-status-${item.status}`}>{FUNERAL_STATUS_LABELS[item.status]}</span></td>
+                    <td>{formatRequestDate(new Date(item.createdAt).toISOString())}</td>
+                    <td><button className="table-action" type="button" onClick={() => openDetail(item.id)}>Ver expediente</button></td>
+                  </tr>)}
+          </tbody>
+        </table>
+      </div>
+
+      {pagination && <div className="request-pagination">
+        <span>{pagination.total} expediente(s) · Página {pagination.page} de {pagination.totalPages}</span>
+        <div>
+          <button className="secondary-btn" type="button" disabled={pagination.page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Anterior</button>
+          <button className="secondary-btn" type="button" disabled={pagination.page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+        </div>
+      </div>}
+    </section>
+
+    {selectedId && <div className="modal-backdrop request-detail-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedId(null); }}>
+      <section className="modal request-detail-modal">
+        <div className="modal-head">
+          <div>
+            <p className="page-kicker">MI EXPEDIENTE</p>
+            <h2>{selectedCase?.caseNumber ?? "Expediente"}</h2>
+            <p>Solicitud relacionada: {selectedCase?.serviceRequestReferenceCode ?? "Cargando…"}</p>
+          </div>
+          <button className="icon-button" type="button" aria-label="Cerrar" onClick={() => setSelectedId(null)}><X size={16} /></button>
+        </div>
+
+        {error && <div className="page-inline-error" role="alert">{error}</div>}
+
+        {detailQuery.isLoading
+          ? <div className="loading-state">Cargando expediente…</div>
+          : detailQuery.isError || !selectedCase
+            ? <div className="error-state"><strong>No se pudo cargar el expediente.</strong><p>Es posible que ya no esté asignado a tu cuenta.</p><button className="secondary-btn" type="button" onClick={() => detailQuery.refetch()}>Reintentar</button></div>
+            : <>
+              <div className="funeral-detail-status">
+                <span className={`pill request-status funeral-status-${selectedCase.status}`}>{FUNERAL_STATUS_LABELS[selectedCase.status]}</span>
+                <span>Actualizado: {formatRequestDate(new Date(selectedCase.updatedAt).toISOString())}</span>
+              </div>
+
+              <div className="request-detail-grid">
+                <div><small>Fallecido</small><strong>{selectedCase.deceasedFullName}</strong></div>
+                <div><small>Fecha de fallecimiento</small><strong>{selectedCase.deceasedDateOfDeath ? formatRequestDate(new Date(selectedCase.deceasedDateOfDeath).toISOString()) : "No registrada"}</strong></div>
+                <div><small>Lugar del servicio</small><strong>{selectedCase.serviceLocation || "No especificado"}</strong></div>
+                <div><small>Contacto responsable</small><strong>{selectedCase.responsibleContactName}</strong></div>
+                <div><small>Teléfono responsable</small><strong>{selectedCase.responsibleContactPhone}</strong></div>
+                <div><small>Fecha de creación</small><strong>{formatRequestDate(new Date(selectedCase.createdAt).toISOString())}</strong></div>
+              </div>
+
+              {selectedCase.notes && <div className="request-notes"><small>Notas operativas</small><p>{selectedCase.notes}</p></div>}
+
+              <div className="request-history">
+                <h3><Clock3 size={16} /> Historial del expediente</h3>
+                {history.length === 0
+                  ? <p className="request-history-empty">No hay movimientos registrados.</p>
+                  : <ol>{history.map((entry) => <li key={entry.id}>
+                    <span className="request-history-dot" />
+                    <div>
+                      <strong>{entry.previousStatus ? `${FUNERAL_STATUS_LABELS[entry.previousStatus]} → ` : ""}{FUNERAL_STATUS_LABELS[entry.newStatus]}</strong>
+                      <small>{formatRequestDate(new Date(entry.createdAt).toISOString())} · {entry.changedByName}</small>
+                      {entry.observation && <p>{entry.observation}</p>}
+                    </div>
+                  </li>)}</ol>}
+              </div>
+
+              {availableStatuses.length > 0
+                ? <form className="request-update-form" onSubmit={submitStatus}>
+                  <h3>Registrar avance del servicio</h3>
+                  <label>Nuevo estado
+                    <select required value={nextStatus} onChange={(event) => setNextStatus(event.target.value as FuneralCaseStatusValue | "")}>
+                      <option value="">Selecciona el nuevo estado</option>
+                      {availableStatuses.map((status) => <option key={status} value={status}>{FUNERAL_STATUS_LABELS[status]}</option>)}
+                    </select>
+                  </label>
+                  <label>Observación <span>(opcional)</span>
+                    <textarea rows={3} maxLength={1000} value={observation} onChange={(event) => setObservation(event.target.value)} placeholder="Describe el avance o detalle del servicio." />
+                  </label>
+                  <button className="primary-btn" type="submit" disabled={!nextStatus || updateStatus.isPending}>
+                    {updateStatus.isPending ? <RefreshCw size={15} /> : <Check size={15} />}
+                    {updateStatus.isPending ? "Guardando…" : "Registrar avance"}
+                  </button>
+                </form>
+                : <p className="request-terminal-note">Este expediente no admite más avances de estado.</p>}
+            </>}
+      </section>
+    </div>}
+  </WorkspaceShell>;
+}
+
+function ProtectedRoute({ session, children, adminOnly = false, employeeOnly = false }: { session: AuthenticatedSession; children: ReactNode; adminOnly?: boolean; employeeOnly?: boolean }) {
   if (session.user.mustChangePassword) {
     return <Redirect to="/change-password" />;
   }
   if (adminOnly && session.user.role !== "administrador") {
+    return <Redirect to="/app" />;
+  }
+  if (employeeOnly && session.user.role !== "empleado") {
     return <Redirect to="/app" />;
   }
   return children;
@@ -1173,9 +1753,11 @@ function AppRoutes() {
     <Route path="/personal"><SignIn session={session} /></Route>
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/mi-trabajo">{session ? <ProtectedRoute session={session} employeeOnly><EmployeeFuneralCases session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/users">{session ? <ProtectedRoute session={session} adminOnly><AdminUsers session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-offerings">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceOfferings session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route path="/admin/service-requests">{session ? <ProtectedRoute session={session} adminOnly><AdminServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
+    <Route path="/admin/funeral-cases">{session ? <ProtectedRoute session={session} adminOnly><AdminFuneralCases session={session} /></ProtectedRoute> : <Redirect to="/" />}</Route>
     <Route component={NotFound} />
   </Switch>;
 }

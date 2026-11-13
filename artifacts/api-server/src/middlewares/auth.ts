@@ -110,6 +110,15 @@ export const requireAdministrator: RequestHandler = (req, res, next) => {
   next();
 };
 
+export const requireEmployee: RequestHandler = (req, res, next) => {
+  if (req.serenaAuth?.role !== "empleado") {
+    res.status(403).json({ error: "Se requiere el rol de empleado." });
+    return;
+  }
+
+  next();
+};
+
 export const requireSameOrigin: RequestHandler = (req, res, next) => {
   const origin = req.get("origin");
   const fetchSite = req.get("sec-fetch-site");

@@ -548,3 +548,67 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
     font-size: 0.74rem;
   }
 }
+
+
+/* Serena: gestión de expedientes funerarios */
+.funeral-subline {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font: 9px var(--mono);
+}
+.muted-text { color: var(--muted); font-size: 10px; }
+.funeral-status-abierto { background: #edf0e8; color: #526b57; }
+.funeral-status-en_preparacion { background: #e8edf2; color: #536f8c; }
+.funeral-status-programado { background: #f2eee4; color: #8c7045; }
+.funeral-status-en_ejecucion { background: #e8eee9; color: #3f6c59; }
+.funeral-status-finalizado { background: #e7efe6; color: #4c7557; }
+.funeral-status-cancelado { background: #f2e9e6; color: #925b53; }
+.funeral-modal { width: min(100%, 760px); }
+.funeral-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+.funeral-field {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: #40554b;
+  font-size: 11px;
+}
+.funeral-field > span, .funeral-field small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+.funeral-field input, .funeral-field select, .funeral-field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 11px;
+}
+.funeral-field textarea { resize: vertical; line-height: 1.5; }
+.funeral-field-full { grid-column: 1 / -1; }
+.funeral-source-pages { display: flex; gap: 8px; grid-column: 1 / -1; }
+.funeral-detail-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 15px;
+  color: var(--muted);
+  font-size: 10px;
+}
+@media (max-width: 580px) {
+  .funeral-form-grid { grid-template-columns: 1fr; }
+  .funeral-field-full { grid-column: auto; }
+  .funeral-source-pages { flex-wrap: wrap; }
+  .funeral-detail-status { align-items: flex-start; flex-direction: column; }
+}

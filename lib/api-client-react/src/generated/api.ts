@@ -25,6 +25,8 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AdminFuneralCaseDetail,
+  AdminFuneralCaseList,
   AdminServiceRequestDetail,
   AdminServiceRequestList,
   ApiError,
@@ -32,13 +34,16 @@ import type {
   AuthenticatedUser,
   ChangePasswordInput,
   CreateEmployeeInput,
+  CreateFuneralCaseInput,
   CreateServiceOfferingInput,
   CreateServiceRequest,
   EmployeeCreateResult,
   EmployeeList,
   EmployeeStatusResponse,
   HealthStatus,
+  ListAdminFuneralCasesParams,
   ListAdminServiceRequestsParams,
+  ListEmployeeFuneralCasesParams,
   LoginInput,
   LogoutResult,
   ServiceOfferingList,
@@ -46,6 +51,7 @@ import type {
   ServiceRequestCreated,
   ServiceRequestStatus,
   SetEmployeeActiveInput,
+  UpdateFuneralCaseStatusInput,
   UpdateServiceOfferingInput,
   UpdateServiceRequestStatus
 } from './api.schemas';
@@ -369,6 +375,694 @@ export function useGetServiceRequest<TData = Awaited<ReturnType<typeof getServic
 
 
 
+
+export const getListAdminFuneralCasesUrl = (params?: ListAdminFuneralCasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/funeral-cases?${stringifiedParams}` : `/api/admin/funeral-cases`
+}
+
+/**
+ * @summary List funeral cases for administrators
+ */
+export const listAdminFuneralCases = async (params?: ListAdminFuneralCasesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseList> => {
+
+  return customFetch<AdminFuneralCaseList>(getListAdminFuneralCasesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminFuneralCasesQueryKey = (params?: ListAdminFuneralCasesParams,) => {
+    return [
+    `/api/admin/funeral-cases`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminFuneralCasesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminFuneralCases>>, TError = ErrorType<ApiError>>(params?: ListAdminFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminFuneralCasesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminFuneralCases>>> = ({ signal }) => listAdminFuneralCases(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAdminFuneralCasesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminFuneralCases>>>
+export type ListAdminFuneralCasesQueryError = ErrorType<ApiError>
+
+
+export function useListAdminFuneralCases<TData = Awaited<ReturnType<typeof listAdminFuneralCases>>, TError = ErrorType<ApiError>>(
+ params: undefined |  ListAdminFuneralCasesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminFuneralCases>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminFuneralCases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminFuneralCases<TData = Awaited<ReturnType<typeof listAdminFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminFuneralCases>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminFuneralCases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAdminFuneralCases<TData = Awaited<ReturnType<typeof listAdminFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List funeral cases for administrators
+ */
+
+export function useListAdminFuneralCases<TData = Awaited<ReturnType<typeof listAdminFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListAdminFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAdminFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAdminFuneralCasesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAdminFuneralCaseUrl = () => {
+
+
+
+
+  return `/api/admin/funeral-cases`
+}
+
+/**
+ * Creates at most one funeral case per confirmed service request and records its initial status history.
+ * @summary Create a funeral case from a confirmed service request
+ */
+export const createAdminFuneralCase = async (createFuneralCaseInput: CreateFuneralCaseInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminFuneralCaseDetail>(getCreateAdminFuneralCaseUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createFuneralCaseInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAdminFuneralCaseMutationKey = () => ['createAdminFuneralCase'] as const;
+
+export const getCreateAdminFuneralCaseMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminFuneralCase>>, TError,CreateAdminFuneralCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminFuneralCase>>, TError,CreateAdminFuneralCaseMutationVariables, TContext> => {
+
+const mutationKey = getCreateAdminFuneralCaseMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminFuneralCase>>, CreateAdminFuneralCaseMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAdminFuneralCase(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAdminFuneralCaseMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminFuneralCase>>>
+    export type CreateAdminFuneralCaseMutationBody = BodyType<CreateFuneralCaseInput>
+    export type CreateAdminFuneralCaseMutationError = ErrorType<ApiError>
+    export type CreateAdminFuneralCaseMutationVariables = {data: BodyType<CreateFuneralCaseInput>}
+
+    /**
+ * @summary Create a funeral case from a confirmed service request
+ */
+export const useCreateAdminFuneralCase = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminFuneralCase>>, TError,CreateAdminFuneralCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createAdminFuneralCase>>,
+        TError,
+        CreateAdminFuneralCaseMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateAdminFuneralCaseMutationOptions(options), queryClient);
+    }
+
+export const getGetAdminFuneralCaseUrl = (caseId: string,) => {
+
+
+
+
+  return `/api/admin/funeral-cases/${caseId}`
+}
+
+/**
+ * @summary Get funeral case details and status history
+ */
+export const getAdminFuneralCase = async (caseId: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseDetail> => {
+
+  return customFetch<AdminFuneralCaseDetail>(getGetAdminFuneralCaseUrl(caseId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminFuneralCaseQueryKey = (caseId: string,) => {
+    return [
+    `/api/admin/funeral-cases/${caseId}`
+    ] as const;
+    }
+
+
+export const getGetAdminFuneralCaseQueryOptions = <TData = Awaited<ReturnType<typeof getAdminFuneralCase>>, TError = ErrorType<ApiError>>(caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminFuneralCaseQueryKey(caseId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminFuneralCase>>> = ({ signal }) => getAdminFuneralCase(caseId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: caseId !== null && caseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAdminFuneralCaseQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminFuneralCase>>>
+export type GetAdminFuneralCaseQueryError = ErrorType<ApiError>
+
+
+export function useGetAdminFuneralCase<TData = Awaited<ReturnType<typeof getAdminFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminFuneralCase>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminFuneralCase>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminFuneralCase<TData = Awaited<ReturnType<typeof getAdminFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAdminFuneralCase>>,
+          TError,
+          Awaited<ReturnType<typeof getAdminFuneralCase>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAdminFuneralCase<TData = Awaited<ReturnType<typeof getAdminFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get funeral case details and status history
+ */
+
+export function useGetAdminFuneralCase<TData = Awaited<ReturnType<typeof getAdminFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAdminFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAdminFuneralCaseQueryOptions(caseId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminFuneralCaseStatusUrl = (caseId: string,) => {
+
+
+
+
+  return `/api/admin/funeral-cases/${caseId}/status`
+}
+
+/**
+ * @summary Change funeral case status and record an observation
+ */
+export const updateAdminFuneralCaseStatus = async (caseId: string,
+    updateFuneralCaseStatusInput: UpdateFuneralCaseStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminFuneralCaseDetail>(getUpdateAdminFuneralCaseStatusUrl(caseId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateFuneralCaseStatusInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminFuneralCaseStatusMutationKey = () => ['updateAdminFuneralCaseStatus'] as const;
+
+export const getUpdateAdminFuneralCaseStatusMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>, TError,UpdateAdminFuneralCaseStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>, TError,UpdateAdminFuneralCaseStatusMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAdminFuneralCaseStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>, UpdateAdminFuneralCaseStatusMutationVariables> = (props) => {
+          const {caseId,data} = props ?? {};
+
+          return  updateAdminFuneralCaseStatus(caseId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminFuneralCaseStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>>
+    export type UpdateAdminFuneralCaseStatusMutationBody = BodyType<UpdateFuneralCaseStatusInput>
+    export type UpdateAdminFuneralCaseStatusMutationError = ErrorType<ApiError>
+    export type UpdateAdminFuneralCaseStatusMutationVariables = {caseId: string;data: BodyType<UpdateFuneralCaseStatusInput>}
+
+    /**
+ * @summary Change funeral case status and record an observation
+ */
+export const useUpdateAdminFuneralCaseStatus = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>, TError,UpdateAdminFuneralCaseStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminFuneralCaseStatus>>,
+        TError,
+        UpdateAdminFuneralCaseStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAdminFuneralCaseStatusMutationOptions(options), queryClient);
+    }
+
+export const getListEmployeeFuneralCasesUrl = (params?: ListEmployeeFuneralCasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/employee/funeral-cases?${stringifiedParams}` : `/api/employee/funeral-cases`
+}
+
+/**
+ * Returns only funeral cases assigned to the authenticated employee.
+ * @summary List funeral cases assigned to the authenticated employee
+ */
+export const listEmployeeFuneralCases = async (params?: ListEmployeeFuneralCasesParams, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseList> => {
+
+  return customFetch<AdminFuneralCaseList>(getListEmployeeFuneralCasesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListEmployeeFuneralCasesQueryKey = (params?: ListEmployeeFuneralCasesParams,) => {
+    return [
+    `/api/employee/funeral-cases`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListEmployeeFuneralCasesQueryOptions = <TData = Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError = ErrorType<ApiError>>(params?: ListEmployeeFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEmployeeFuneralCasesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmployeeFuneralCases>>> = ({ signal }) => listEmployeeFuneralCases(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListEmployeeFuneralCasesQueryResult = NonNullable<Awaited<ReturnType<typeof listEmployeeFuneralCases>>>
+export type ListEmployeeFuneralCasesQueryError = ErrorType<ApiError>
+
+
+export function useListEmployeeFuneralCases<TData = Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError = ErrorType<ApiError>>(
+ params: undefined |  ListEmployeeFuneralCasesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployeeFuneralCases>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployeeFuneralCases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployeeFuneralCases<TData = Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListEmployeeFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmployeeFuneralCases>>,
+          TError,
+          Awaited<ReturnType<typeof listEmployeeFuneralCases>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEmployeeFuneralCases<TData = Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListEmployeeFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List funeral cases assigned to the authenticated employee
+ */
+
+export function useListEmployeeFuneralCases<TData = Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError = ErrorType<ApiError>>(
+ params?: ListEmployeeFuneralCasesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmployeeFuneralCases>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEmployeeFuneralCasesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEmployeeFuneralCaseUrl = (caseId: string,) => {
+
+
+
+
+  return `/api/employee/funeral-cases/${caseId}`
+}
+
+/**
+ * Employees can only access cases assigned to their own account.
+ * @summary Get an assigned funeral case and its status history
+ */
+export const getEmployeeFuneralCase = async (caseId: string, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseDetail> => {
+
+  return customFetch<AdminFuneralCaseDetail>(getGetEmployeeFuneralCaseUrl(caseId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEmployeeFuneralCaseQueryKey = (caseId: string,) => {
+    return [
+    `/api/employee/funeral-cases/${caseId}`
+    ] as const;
+    }
+
+
+export const getGetEmployeeFuneralCaseQueryOptions = <TData = Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError = ErrorType<ApiError>>(caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEmployeeFuneralCaseQueryKey(caseId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEmployeeFuneralCase>>> = ({ signal }) => getEmployeeFuneralCase(caseId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: caseId !== null && caseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetEmployeeFuneralCaseQueryResult = NonNullable<Awaited<ReturnType<typeof getEmployeeFuneralCase>>>
+export type GetEmployeeFuneralCaseQueryError = ErrorType<ApiError>
+
+
+export function useGetEmployeeFuneralCase<TData = Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeFuneralCase>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeFuneralCase>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEmployeeFuneralCase<TData = Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEmployeeFuneralCase>>,
+          TError,
+          Awaited<ReturnType<typeof getEmployeeFuneralCase>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetEmployeeFuneralCase<TData = Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get an assigned funeral case and its status history
+ */
+
+export function useGetEmployeeFuneralCase<TData = Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError = ErrorType<ApiError>>(
+ caseId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getEmployeeFuneralCase>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetEmployeeFuneralCaseQueryOptions(caseId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateEmployeeFuneralCaseStatusUrl = (caseId: string,) => {
+
+
+
+
+  return `/api/employee/funeral-cases/${caseId}/status`
+}
+
+/**
+ * Employees may advance their assigned cases but cannot cancel them or modify cases assigned to others.
+ * @summary Advance the status of an assigned funeral case
+ */
+export const updateEmployeeFuneralCaseStatus = async (caseId: string,
+    updateFuneralCaseStatusInput: UpdateFuneralCaseStatusInput, options?: Parameters<typeof customFetch>[1]): Promise<AdminFuneralCaseDetail> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AdminFuneralCaseDetail>(getUpdateEmployeeFuneralCaseStatusUrl(caseId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateFuneralCaseStatusInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateEmployeeFuneralCaseStatusMutationKey = () => ['updateEmployeeFuneralCaseStatus'] as const;
+
+export const getUpdateEmployeeFuneralCaseStatusMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>, TError,UpdateEmployeeFuneralCaseStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>, TError,UpdateEmployeeFuneralCaseStatusMutationVariables, TContext> => {
+
+const mutationKey = getUpdateEmployeeFuneralCaseStatusMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>, UpdateEmployeeFuneralCaseStatusMutationVariables> = (props) => {
+          const {caseId,data} = props ?? {};
+
+          return  updateEmployeeFuneralCaseStatus(caseId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEmployeeFuneralCaseStatusMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>>
+    export type UpdateEmployeeFuneralCaseStatusMutationBody = BodyType<UpdateFuneralCaseStatusInput>
+    export type UpdateEmployeeFuneralCaseStatusMutationError = ErrorType<ApiError>
+    export type UpdateEmployeeFuneralCaseStatusMutationVariables = {caseId: string;data: BodyType<UpdateFuneralCaseStatusInput>}
+
+    /**
+ * @summary Advance the status of an assigned funeral case
+ */
+export const useUpdateEmployeeFuneralCaseStatus = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>, TError,UpdateEmployeeFuneralCaseStatusMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateEmployeeFuneralCaseStatus>>,
+        TError,
+        UpdateEmployeeFuneralCaseStatusMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateEmployeeFuneralCaseStatusMutationOptions(options), queryClient);
+    }
 
 export const getListAdminServiceRequestsUrl = (params?: ListAdminServiceRequestsParams,) => {
   const normalizedParams = new URLSearchParams();
