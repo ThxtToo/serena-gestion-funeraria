@@ -37,6 +37,7 @@ import type {
   CreateResourceInput,
   CreateServiceOfferingInput,
   CreateServiceRequest,
+  DemoPolicyResponse,
   EmployeeCreateResult,
   EmployeeList,
   EmployeeStatusResponse,
@@ -2830,4 +2831,106 @@ export const useCancelResourceAssignment = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getCancelResourceAssignmentMutationOptions(options), queryClient);
     }
+
+export const getGetDemoPolicyUrl = (policyCode: string,) => {
+
+
+
+
+  return `/api/admin/demo-policies/${policyCode}`
+}
+
+/**
+ * Returns demonstration data only. It is not a real coverage check or an authorization from any insurer.
+ * @summary Look up a fictional demonstration policy
+ */
+export const getDemoPolicy = async (policyCode: string, options?: Parameters<typeof customFetch>[1]): Promise<DemoPolicyResponse> => {
+
+  return customFetch<DemoPolicyResponse>(getGetDemoPolicyUrl(policyCode),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDemoPolicyQueryKey = (policyCode: string,) => {
+    return [
+    `/api/admin/demo-policies/${policyCode}`
+    ] as const;
+    }
+
+
+export const getGetDemoPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getDemoPolicy>>, TError = ErrorType<ApiError>>(policyCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDemoPolicyQueryKey(policyCode);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDemoPolicy>>> = ({ signal }) => getDemoPolicy(policyCode, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: policyCode !== null && policyCode !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDemoPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getDemoPolicy>>>
+export type GetDemoPolicyQueryError = ErrorType<ApiError>
+
+
+export function useGetDemoPolicy<TData = Awaited<ReturnType<typeof getDemoPolicy>>, TError = ErrorType<ApiError>>(
+ policyCode: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDemoPolicy>>,
+          TError,
+          Awaited<ReturnType<typeof getDemoPolicy>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDemoPolicy<TData = Awaited<ReturnType<typeof getDemoPolicy>>, TError = ErrorType<ApiError>>(
+ policyCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDemoPolicy>>,
+          TError,
+          Awaited<ReturnType<typeof getDemoPolicy>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDemoPolicy<TData = Awaited<ReturnType<typeof getDemoPolicy>>, TError = ErrorType<ApiError>>(
+ policyCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Look up a fictional demonstration policy
+ */
+
+export function useGetDemoPolicy<TData = Awaited<ReturnType<typeof getDemoPolicy>>, TError = ErrorType<ApiError>>(
+ policyCode: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDemoPolicy>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDemoPolicyQueryOptions(policyCode,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

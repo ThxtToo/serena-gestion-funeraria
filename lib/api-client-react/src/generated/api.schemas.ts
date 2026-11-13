@@ -551,6 +551,27 @@ export interface CancelResourceAssignmentInput {
   reason?: string;
 }
 
+export type DemoPolicyDemoStatus = typeof DemoPolicyDemoStatus[keyof typeof DemoPolicyDemoStatus];
+
+
+export const DemoPolicyDemoStatus = {
+  vigente: 'vigente',
+  vencida: 'vencida',
+  suspendida: 'suspendida',
+} as const;
+
+export interface DemoPolicy {
+  policyCode: string;
+  insurerName: string;
+  demoStatus: DemoPolicyDemoStatus;
+  isDemoData: boolean;
+  notice: string;
+}
+
+export interface DemoPolicyResponse {
+  policy: DemoPolicy;
+}
+
 export interface ApiError {
   error: string;
 }

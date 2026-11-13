@@ -793,3 +793,27 @@ export const CancelResourceAssignmentResponse = zod.object({
 })
 
 
+/**
+ * Returns demonstration data only. It is not a real coverage check or an authorization from any insurer.
+ * @summary Look up a fictional demonstration policy
+ */
+export const getDemoPolicyPathPolicyCodeMin = 3;
+export const getDemoPolicyPathPolicyCodeMax = 40;
+
+
+
+export const GetDemoPolicyParams = zod.object({
+  "policyCode": zod.coerce.string().min(getDemoPolicyPathPolicyCodeMin).max(getDemoPolicyPathPolicyCodeMax)
+})
+
+export const GetDemoPolicyResponse = zod.object({
+  "policy": zod.object({
+  "policyCode": zod.string(),
+  "insurerName": zod.string(),
+  "demoStatus": zod.enum(['vigente', 'vencida', 'suspendida']),
+  "isDemoData": zod.boolean(),
+  "notice": zod.string()
+})
+})
+
+

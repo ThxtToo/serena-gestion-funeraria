@@ -2,6 +2,8 @@ import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import {
   db,
+  demoPoliciesTable,
+  insurersTable,
   pool,
   rolesTable,
   serviceOfferingsTable,
@@ -124,6 +126,29 @@ async function main() {
       .returning({ id: serviceOfferingsTable.id, name: serviceOfferingsTable.name });
 
     savedOfferings.push(created);
+  }
+
+  const [existingInsurer] = await db
+    .select({ id: insurersTable.id })
+    .from(insurersTable)
+    .limit(1);
+
+  if (!existingInsurer) {
+    const [insurerA] = await db
+      .insert(insurersTable)
+      .values({ name: "Aseguradora Demo Norte", isDemoData: true })
+      .returning({ id: insurersTable.id });
+
+    const [insurerB] = await db
+      .insert(insurersTable)
+      .values({ name: "Aseguradora Demo Sur", isDemoData: true })
+      .returning({ id: insurersTable.id });
+
+    await db.insert(demoPoliciesTable).values([
+      { policyCode: "DEMO-0001", insurerId: insurerA.id, demoStatus: "vigente" },
+      { policyCode: "DEMO-0002", insurerId: insurerA.id, demoStatus: "vencida" },
+      { policyCode: "DEMO-0003", insurerId: insurerB.id, demoStatus: "vigente" },
+    ]);
   }
 
   const [existingRequest] = await db
