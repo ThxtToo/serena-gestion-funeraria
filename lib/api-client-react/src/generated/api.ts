@@ -28,10 +28,13 @@ import type {
   ApiError,
   AuthenticatedSession,
   AuthenticatedUser,
+  CancelResourceAssignmentInput,
   ChangePasswordInput,
   CreateEmployeeInput,
   CreateInventoryItemInput,
   CreateInventoryMovementInput,
+  CreateResourceAssignmentInput,
+  CreateResourceInput,
   CreateServiceOfferingInput,
   CreateServiceRequest,
   EmployeeCreateResult,
@@ -42,9 +45,14 @@ import type {
   InventoryItemResponse,
   InventoryMovementList,
   InventoryMovementResult,
+  ListResourcesParams,
   ListServiceRequestsParams,
   LoginInput,
   LogoutResult,
+  ResourceAssignmentList,
+  ResourceAssignmentResponse,
+  ResourceList,
+  ResourceResponse,
   ServiceOfferingList,
   ServiceOfferingResponse,
   ServiceRequestCreated,
@@ -53,6 +61,7 @@ import type {
   ServiceRequestStatus,
   SetEmployeeActiveInput,
   UpdateInventoryItemInput,
+  UpdateResourceInput,
   UpdateServiceOfferingInput,
   UpdateServiceRequestStatusInput
 } from './api.schemas';
@@ -2154,5 +2163,671 @@ export const useCreateInventoryMovement = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getCreateInventoryMovementMutationOptions(options), queryClient);
+    }
+
+export const getListResourcesUrl = (params?: ListResourcesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/resources?${stringifiedParams}` : `/api/admin/resources`
+}
+
+/**
+ * When startAt and endAt are provided, each resource includes whether it is available for that period.
+ * @summary List operational resources
+ */
+export const listResources = async (params?: ListResourcesParams, options?: Parameters<typeof customFetch>[1]): Promise<ResourceList> => {
+
+  return customFetch<ResourceList>(getListResourcesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResourcesQueryKey = (params?: ListResourcesParams,) => {
+    return [
+    `/api/admin/resources`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListResourcesQueryOptions = <TData = Awaited<ReturnType<typeof listResources>>, TError = ErrorType<ApiError>>(params?: ListResourcesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResourcesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResources>>> = ({ signal }) => listResources(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListResourcesQueryResult = NonNullable<Awaited<ReturnType<typeof listResources>>>
+export type ListResourcesQueryError = ErrorType<ApiError>
+
+
+export function useListResources<TData = Awaited<ReturnType<typeof listResources>>, TError = ErrorType<ApiError>>(
+ params: undefined |  ListResourcesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResources>>,
+          TError,
+          Awaited<ReturnType<typeof listResources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListResources<TData = Awaited<ReturnType<typeof listResources>>, TError = ErrorType<ApiError>>(
+ params?: ListResourcesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResources>>,
+          TError,
+          Awaited<ReturnType<typeof listResources>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListResources<TData = Awaited<ReturnType<typeof listResources>>, TError = ErrorType<ApiError>>(
+ params?: ListResourcesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List operational resources
+ */
+
+export function useListResources<TData = Awaited<ReturnType<typeof listResources>>, TError = ErrorType<ApiError>>(
+ params?: ListResourcesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResources>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListResourcesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResourceUrl = () => {
+
+
+
+
+  return `/api/admin/resources`
+}
+
+/**
+ * @summary Register an operational resource
+ */
+export const createResource = async (createResourceInput: CreateResourceInput, options?: Parameters<typeof customFetch>[1]): Promise<ResourceResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResourceResponse>(getCreateResourceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResourceInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResourceMutationKey = () => ['createResource'] as const;
+
+export const getCreateResourceMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,CreateResourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,CreateResourceMutationVariables, TContext> => {
+
+const mutationKey = getCreateResourceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResource>>, CreateResourceMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createResource(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>
+    export type CreateResourceMutationBody = BodyType<CreateResourceInput>
+    export type CreateResourceMutationError = ErrorType<ApiError>
+    export type CreateResourceMutationVariables = {data: BodyType<CreateResourceInput>}
+
+    /**
+ * @summary Register an operational resource
+ */
+export const useCreateResource = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResource>>, TError,CreateResourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createResource>>,
+        TError,
+        CreateResourceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResourceMutationOptions(options), queryClient);
+    }
+
+export const getUpdateResourceUrl = (resourceId: string,) => {
+
+
+
+
+  return `/api/admin/resources/${resourceId}`
+}
+
+/**
+ * @summary Update a resource
+ */
+export const updateResource = async (resourceId: string,
+    updateResourceInput: UpdateResourceInput, options?: Parameters<typeof customFetch>[1]): Promise<ResourceResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResourceResponse>(getUpdateResourceUrl(resourceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateResourceInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateResourceMutationKey = () => ['updateResource'] as const;
+
+export const getUpdateResourceMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,UpdateResourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,UpdateResourceMutationVariables, TContext> => {
+
+const mutationKey = getUpdateResourceMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateResource>>, UpdateResourceMutationVariables> = (props) => {
+          const {resourceId,data} = props ?? {};
+
+          return  updateResource(resourceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>
+    export type UpdateResourceMutationBody = BodyType<UpdateResourceInput>
+    export type UpdateResourceMutationError = ErrorType<ApiError>
+    export type UpdateResourceMutationVariables = {resourceId: string;data: BodyType<UpdateResourceInput>}
+
+    /**
+ * @summary Update a resource
+ */
+export const useUpdateResource = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateResource>>, TError,UpdateResourceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateResource>>,
+        TError,
+        UpdateResourceMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateResourceMutationOptions(options), queryClient);
+    }
+
+export const getListResourceAssignmentsUrl = (resourceId: string,) => {
+
+
+
+
+  return `/api/admin/resources/${resourceId}/assignments`
+}
+
+/**
+ * @summary List the assignments of one resource
+ */
+export const listResourceAssignments = async (resourceId: string, options?: Parameters<typeof customFetch>[1]): Promise<ResourceAssignmentList> => {
+
+  return customFetch<ResourceAssignmentList>(getListResourceAssignmentsUrl(resourceId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListResourceAssignmentsQueryKey = (resourceId: string,) => {
+    return [
+    `/api/admin/resources/${resourceId}/assignments`
+    ] as const;
+    }
+
+
+export const getListResourceAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listResourceAssignments>>, TError = ErrorType<ApiError>>(resourceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListResourceAssignmentsQueryKey(resourceId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listResourceAssignments>>> = ({ signal }) => listResourceAssignments(resourceId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: resourceId !== null && resourceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListResourceAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listResourceAssignments>>>
+export type ListResourceAssignmentsQueryError = ErrorType<ApiError>
+
+
+export function useListResourceAssignments<TData = Awaited<ReturnType<typeof listResourceAssignments>>, TError = ErrorType<ApiError>>(
+ resourceId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResourceAssignments>>,
+          TError,
+          Awaited<ReturnType<typeof listResourceAssignments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListResourceAssignments<TData = Awaited<ReturnType<typeof listResourceAssignments>>, TError = ErrorType<ApiError>>(
+ resourceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResourceAssignments>>,
+          TError,
+          Awaited<ReturnType<typeof listResourceAssignments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListResourceAssignments<TData = Awaited<ReturnType<typeof listResourceAssignments>>, TError = ErrorType<ApiError>>(
+ resourceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the assignments of one resource
+ */
+
+export function useListResourceAssignments<TData = Awaited<ReturnType<typeof listResourceAssignments>>, TError = ErrorType<ApiError>>(
+ resourceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listResourceAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListResourceAssignmentsQueryOptions(resourceId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListRequestAssignmentsUrl = (serviceRequestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${serviceRequestId}/assignments`
+}
+
+/**
+ * @summary List the resources assigned to a request
+ */
+export const listRequestAssignments = async (serviceRequestId: string, options?: Parameters<typeof customFetch>[1]): Promise<ResourceAssignmentList> => {
+
+  return customFetch<ResourceAssignmentList>(getListRequestAssignmentsUrl(serviceRequestId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRequestAssignmentsQueryKey = (serviceRequestId: string,) => {
+    return [
+    `/api/admin/service-requests/${serviceRequestId}/assignments`
+    ] as const;
+    }
+
+
+export const getListRequestAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listRequestAssignments>>, TError = ErrorType<ApiError>>(serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRequestAssignmentsQueryKey(serviceRequestId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRequestAssignments>>> = ({ signal }) => listRequestAssignments(serviceRequestId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: serviceRequestId !== null && serviceRequestId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListRequestAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listRequestAssignments>>>
+export type ListRequestAssignmentsQueryError = ErrorType<ApiError>
+
+
+export function useListRequestAssignments<TData = Awaited<ReturnType<typeof listRequestAssignments>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRequestAssignments>>,
+          TError,
+          Awaited<ReturnType<typeof listRequestAssignments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRequestAssignments<TData = Awaited<ReturnType<typeof listRequestAssignments>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRequestAssignments>>,
+          TError,
+          Awaited<ReturnType<typeof listRequestAssignments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListRequestAssignments<TData = Awaited<ReturnType<typeof listRequestAssignments>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List the resources assigned to a request
+ */
+
+export function useListRequestAssignments<TData = Awaited<ReturnType<typeof listRequestAssignments>>, TError = ErrorType<ApiError>>(
+ serviceRequestId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listRequestAssignments>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListRequestAssignmentsQueryOptions(serviceRequestId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateResourceAssignmentUrl = (serviceRequestId: string,) => {
+
+
+
+
+  return `/api/admin/service-requests/${serviceRequestId}/assignments`
+}
+
+/**
+ * @summary Assign a resource to a request for a period
+ */
+export const createResourceAssignment = async (serviceRequestId: string,
+    createResourceAssignmentInput: CreateResourceAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<ResourceAssignmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResourceAssignmentResponse>(getCreateResourceAssignmentUrl(serviceRequestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createResourceAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateResourceAssignmentMutationKey = () => ['createResourceAssignment'] as const;
+
+export const getCreateResourceAssignmentMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResourceAssignment>>, TError,CreateResourceAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createResourceAssignment>>, TError,CreateResourceAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getCreateResourceAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createResourceAssignment>>, CreateResourceAssignmentMutationVariables> = (props) => {
+          const {serviceRequestId,data} = props ?? {};
+
+          return  createResourceAssignment(serviceRequestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateResourceAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof createResourceAssignment>>>
+    export type CreateResourceAssignmentMutationBody = BodyType<CreateResourceAssignmentInput>
+    export type CreateResourceAssignmentMutationError = ErrorType<ApiError>
+    export type CreateResourceAssignmentMutationVariables = {serviceRequestId: string;data: BodyType<CreateResourceAssignmentInput>}
+
+    /**
+ * @summary Assign a resource to a request for a period
+ */
+export const useCreateResourceAssignment = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createResourceAssignment>>, TError,CreateResourceAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createResourceAssignment>>,
+        TError,
+        CreateResourceAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateResourceAssignmentMutationOptions(options), queryClient);
+    }
+
+export const getCancelResourceAssignmentUrl = (assignmentId: string,) => {
+
+
+
+
+  return `/api/admin/resource-assignments/${assignmentId}/cancel`
+}
+
+/**
+ * @summary Cancel an assignment, keeping its history
+ */
+export const cancelResourceAssignment = async (assignmentId: string,
+    cancelResourceAssignmentInput?: CancelResourceAssignmentInput, options?: Parameters<typeof customFetch>[1]): Promise<ResourceAssignmentResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ResourceAssignmentResponse>(getCancelResourceAssignmentUrl(assignmentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(cancelResourceAssignmentInput)
+  }
+);}
+
+
+
+
+
+export const getCancelResourceAssignmentMutationKey = () => ['cancelResourceAssignment'] as const;
+
+export const getCancelResourceAssignmentMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelResourceAssignment>>, TError,CancelResourceAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelResourceAssignment>>, TError,CancelResourceAssignmentMutationVariables, TContext> => {
+
+const mutationKey = getCancelResourceAssignmentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelResourceAssignment>>, CancelResourceAssignmentMutationVariables> = (props) => {
+          const {assignmentId,data} = props ?? {};
+
+          return  cancelResourceAssignment(assignmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelResourceAssignmentMutationResult = NonNullable<Awaited<ReturnType<typeof cancelResourceAssignment>>>
+    export type CancelResourceAssignmentMutationBody = BodyType<CancelResourceAssignmentInput> | undefined
+    export type CancelResourceAssignmentMutationError = ErrorType<ApiError>
+    export type CancelResourceAssignmentMutationVariables = {assignmentId: string;data?: BodyType<CancelResourceAssignmentInput>}
+
+    /**
+ * @summary Cancel an assignment, keeping its history
+ */
+export const useCancelResourceAssignment = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelResourceAssignment>>, TError,CancelResourceAssignmentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof cancelResourceAssignment>>,
+        TError,
+        CancelResourceAssignmentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCancelResourceAssignmentMutationOptions(options), queryClient);
     }
 

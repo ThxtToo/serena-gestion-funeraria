@@ -3,6 +3,7 @@ import adminServiceRequestsRouter from "./admin-service-requests";
 import authRouter from "./auth";
 import healthRouter from "./health";
 import inventoryRouter from "./inventory";
+import resourcesRouter from "./resources";
 import serviceOfferingsRouter from "./service-offerings";
 import serviceRequestsRouter from "./service-requests";
 
@@ -14,5 +15,6 @@ router.use(serviceOfferingsRouter);
 router.use(serviceRequestsRouter);
 router.use(adminServiceRequestsRouter);
 router.use(inventoryRouter);
+router.use(resourcesRouter);
 
 export default router;

@@ -23,6 +23,8 @@ tags:
     description: Staff review and status tracking of service requests
   - name: inventory
     description: Inventory items and stock movements
+  - name: resources
+    description: Operational resources and their assignment to requests
 
 paths:
   /healthz:
@@ -861,6 +863,336 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /admin/resources:
+    get:
+      operationId: listResources
+      tags: [resources]
+      summary: List operational resources
+      description: When startAt and endAt are provided, each resource includes whether it is available for that period.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: startAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: endAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Resources
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceList"
+        "400":
+          description: Invalid period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createResource
+      tags: [resources]
+      summary: Register an operational resource
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceInput"
+      responses:
+        "201":
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: A resource with that name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/resources/{resourceId}:
+    patch:
+      operationId: updateResource
+      tags: [resources]
+      summary: Update a resource
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateResourceInput"
+      responses:
+        "200":
+          description: Updated resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/resources/{resourceId}/assignments:
+    get:
+      operationId: listResourceAssignments
+      tags: [resources]
+      summary: List the assignments of one resource
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceAssignmentList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/service-requests/{serviceRequestId}/assignments:
+    get:
+      operationId: listRequestAssignments
+      tags: [resources]
+      summary: List the resources assigned to a request
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: serviceRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Assignments
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceAssignmentList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createResourceAssignment
+      tags: [resources]
+      summary: Assign a resource to a request for a period
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: serviceRequestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResourceAssignmentInput"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceAssignmentResponse"
+        "400":
+          description: Invalid period or resource not available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Request or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: The resource is already assigned in that period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/resource-assignments/{assignmentId}/cancel:
+    patch:
+      operationId: cancelResourceAssignment
+      tags: [resources]
+      summary: Cancel an assignment, keeping its history
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelResourceAssignmentInput"
+      responses:
+        "200":
+          description: Assignment cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceAssignmentResponse"
+        "400":
+          description: The assignment is not active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Assignment not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -1491,6 +1823,203 @@ components:
       required:
         - inventoryItem
         - movement
+
+    Resource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - sala
+            - vehiculo
+            - equipo
+            - otro
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum:
+            - disponible
+            - mantenimiento
+            - fuera_de_servicio
+        available:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - type
+        - status
+        - available
+        - createdAt
+        - updatedAt
+
+    ResourceList:
+      type: object
+      properties:
+        resources:
+          type: array
+          items:
+            $ref: "#/components/schemas/Resource"
+      required:
+        - resources
+
+    ResourceResponse:
+      type: object
+      properties:
+        resource:
+          $ref: "#/components/schemas/Resource"
+      required:
+        - resource
+
+    CreateResourceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        type:
+          type: string
+          enum:
+            - sala
+            - vehiculo
+            - equipo
+            - otro
+        description:
+          type: string
+          maxLength: 500
+        status:
+          type: string
+          enum:
+            - disponible
+            - mantenimiento
+            - fuera_de_servicio
+      required:
+        - name
+        - type
+
+    UpdateResourceInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        description:
+          type: string
+          maxLength: 500
+        status:
+          type: string
+          enum:
+            - disponible
+            - mantenimiento
+            - fuera_de_servicio
+
+    ResourceAssignment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        serviceRequestId:
+          type: string
+          format: uuid
+        referenceCode:
+          type: string
+        resourceId:
+          type: string
+          format: uuid
+        resourceName:
+          type: string
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - activa
+            - finalizada
+            - cancelada
+        cancellationReason:
+          type: string
+          nullable: true
+        assignedByName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - serviceRequestId
+        - referenceCode
+        - resourceId
+        - resourceName
+        - startAt
+        - endAt
+        - status
+        - createdAt
+
+    ResourceAssignmentList:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceAssignment"
+      required:
+        - assignments
+
+    ResourceAssignmentResponse:
+      type: object
+      properties:
+        assignment:
+          $ref: "#/components/schemas/ResourceAssignment"
+      required:
+        - assignment
+
+    CreateResourceAssignmentInput:
+      type: object
+      additionalProperties: false
+      properties:
+        resourceId:
+          type: string
+          format: uuid
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+      required:
+        - resourceId
+        - startAt
+        - endAt
+
+    CancelResourceAssignmentInput:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 300
 
     ApiError:
       type: object

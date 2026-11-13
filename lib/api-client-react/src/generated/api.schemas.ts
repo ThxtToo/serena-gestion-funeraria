@@ -417,6 +417,140 @@ export interface InventoryMovementResult {
   movement: InventoryMovement;
 }
 
+export type ResourceType = typeof ResourceType[keyof typeof ResourceType];
+
+
+export const ResourceType = {
+  sala: 'sala',
+  vehiculo: 'vehiculo',
+  equipo: 'equipo',
+  otro: 'otro',
+} as const;
+
+export type ResourceStatus = typeof ResourceStatus[keyof typeof ResourceStatus];
+
+
+export const ResourceStatus = {
+  disponible: 'disponible',
+  mantenimiento: 'mantenimiento',
+  fuera_de_servicio: 'fuera_de_servicio',
+} as const;
+
+export interface Resource {
+  id: string;
+  name: string;
+  type: ResourceType;
+  /** @nullable */
+  description?: string | null;
+  status: ResourceStatus;
+  available: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ResourceList {
+  resources: Resource[];
+}
+
+export interface ResourceResponse {
+  resource: Resource;
+}
+
+export type CreateResourceInputType = typeof CreateResourceInputType[keyof typeof CreateResourceInputType];
+
+
+export const CreateResourceInputType = {
+  sala: 'sala',
+  vehiculo: 'vehiculo',
+  equipo: 'equipo',
+  otro: 'otro',
+} as const;
+
+export type CreateResourceInputStatus = typeof CreateResourceInputStatus[keyof typeof CreateResourceInputStatus];
+
+
+export const CreateResourceInputStatus = {
+  disponible: 'disponible',
+  mantenimiento: 'mantenimiento',
+  fuera_de_servicio: 'fuera_de_servicio',
+} as const;
+
+export interface CreateResourceInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  type: CreateResourceInputType;
+  /** @maxLength 500 */
+  description?: string;
+  status?: CreateResourceInputStatus;
+}
+
+export type UpdateResourceInputStatus = typeof UpdateResourceInputStatus[keyof typeof UpdateResourceInputStatus];
+
+
+export const UpdateResourceInputStatus = {
+  disponible: 'disponible',
+  mantenimiento: 'mantenimiento',
+  fuera_de_servicio: 'fuera_de_servicio',
+} as const;
+
+export interface UpdateResourceInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /** @maxLength 500 */
+  description?: string;
+  status?: UpdateResourceInputStatus;
+}
+
+export type ResourceAssignmentStatus = typeof ResourceAssignmentStatus[keyof typeof ResourceAssignmentStatus];
+
+
+export const ResourceAssignmentStatus = {
+  activa: 'activa',
+  finalizada: 'finalizada',
+  cancelada: 'cancelada',
+} as const;
+
+export interface ResourceAssignment {
+  id: string;
+  serviceRequestId: string;
+  referenceCode: string;
+  resourceId: string;
+  resourceName: string;
+  startAt: string;
+  endAt: string;
+  status: ResourceAssignmentStatus;
+  /** @nullable */
+  cancellationReason?: string | null;
+  /** @nullable */
+  assignedByName?: string | null;
+  createdAt: string;
+}
+
+export interface ResourceAssignmentList {
+  assignments: ResourceAssignment[];
+}
+
+export interface ResourceAssignmentResponse {
+  assignment: ResourceAssignment;
+}
+
+export interface CreateResourceAssignmentInput {
+  resourceId: string;
+  startAt: string;
+  endAt: string;
+}
+
+export interface CancelResourceAssignmentInput {
+  /** @maxLength 300 */
+  reason?: string;
+}
+
 export interface ApiError {
   error: string;
 }
@@ -435,4 +569,9 @@ export const ListServiceRequestsStatus = {
   rechazada: 'rechazada',
   cancelada: 'cancelada',
 } as const;
+
+export type ListResourcesParams = {
+startAt?: string;
+endAt?: string;
+};
 

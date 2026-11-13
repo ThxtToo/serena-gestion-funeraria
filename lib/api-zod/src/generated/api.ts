@@ -595,3 +595,201 @@ export const CreateInventoryMovementResponse = zod.object({
 })
 
 
+/**
+ * When startAt and endAt are provided, each resource includes whether it is available for that period.
+ * @summary List operational resources
+ */
+export const ListResourcesQueryParams = zod.object({
+  "startAt": zod.date().optional(),
+  "endAt": zod.date().optional()
+})
+
+export const ListResourcesResponse = zod.object({
+  "resources": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "type": zod.enum(['sala', 'vehiculo', 'equipo', 'otro']),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['disponible', 'mantenimiento', 'fuera_de_servicio']),
+  "available": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Register an operational resource
+ */
+export const createResourceBodyNameMin = 2;
+export const createResourceBodyNameMax = 120;
+
+export const createResourceBodyDescriptionMax = 500;
+
+
+
+export const CreateResourceBody = zod.object({
+  "name": zod.string().min(createResourceBodyNameMin).max(createResourceBodyNameMax),
+  "type": zod.enum(['sala', 'vehiculo', 'equipo', 'otro']),
+  "description": zod.string().max(createResourceBodyDescriptionMax).optional(),
+  "status": zod.enum(['disponible', 'mantenimiento', 'fuera_de_servicio']).optional()
+})
+
+export const CreateResourceResponse = zod.object({
+  "resource": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "type": zod.enum(['sala', 'vehiculo', 'equipo', 'otro']),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['disponible', 'mantenimiento', 'fuera_de_servicio']),
+  "available": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Update a resource
+ */
+export const UpdateResourceParams = zod.object({
+  "resourceId": zod.coerce.string().uuid()
+})
+
+export const updateResourceBodyNameMin = 2;
+export const updateResourceBodyNameMax = 120;
+
+export const updateResourceBodyDescriptionMax = 500;
+
+
+
+export const UpdateResourceBody = zod.object({
+  "name": zod.string().min(updateResourceBodyNameMin).max(updateResourceBodyNameMax).optional(),
+  "description": zod.string().max(updateResourceBodyDescriptionMax).optional(),
+  "status": zod.enum(['disponible', 'mantenimiento', 'fuera_de_servicio']).optional()
+})
+
+export const UpdateResourceResponse = zod.object({
+  "resource": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "type": zod.enum(['sala', 'vehiculo', 'equipo', 'otro']),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['disponible', 'mantenimiento', 'fuera_de_servicio']),
+  "available": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary List the assignments of one resource
+ */
+export const ListResourceAssignmentsParams = zod.object({
+  "resourceId": zod.coerce.string().uuid()
+})
+
+export const ListResourceAssignmentsResponse = zod.object({
+  "assignments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "serviceRequestId": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "resourceId": zod.string().uuid(),
+  "resourceName": zod.string(),
+  "startAt": zod.coerce.date(),
+  "endAt": zod.coerce.date(),
+  "status": zod.enum(['activa', 'finalizada', 'cancelada']),
+  "cancellationReason": zod.string().nullish(),
+  "assignedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary List the resources assigned to a request
+ */
+export const ListRequestAssignmentsParams = zod.object({
+  "serviceRequestId": zod.coerce.string().uuid()
+})
+
+export const ListRequestAssignmentsResponse = zod.object({
+  "assignments": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "serviceRequestId": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "resourceId": zod.string().uuid(),
+  "resourceName": zod.string(),
+  "startAt": zod.coerce.date(),
+  "endAt": zod.coerce.date(),
+  "status": zod.enum(['activa', 'finalizada', 'cancelada']),
+  "cancellationReason": zod.string().nullish(),
+  "assignedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Assign a resource to a request for a period
+ */
+export const CreateResourceAssignmentParams = zod.object({
+  "serviceRequestId": zod.coerce.string().uuid()
+})
+
+export const CreateResourceAssignmentBody = zod.object({
+  "resourceId": zod.string().uuid(),
+  "startAt": zod.coerce.date(),
+  "endAt": zod.coerce.date()
+})
+
+export const CreateResourceAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "serviceRequestId": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "resourceId": zod.string().uuid(),
+  "resourceName": zod.string(),
+  "startAt": zod.coerce.date(),
+  "endAt": zod.coerce.date(),
+  "status": zod.enum(['activa', 'finalizada', 'cancelada']),
+  "cancellationReason": zod.string().nullish(),
+  "assignedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Cancel an assignment, keeping its history
+ */
+export const CancelResourceAssignmentParams = zod.object({
+  "assignmentId": zod.coerce.string().uuid()
+})
+
+export const cancelResourceAssignmentBodyReasonMax = 300;
+
+
+
+export const CancelResourceAssignmentBody = zod.object({
+  "reason": zod.string().max(cancelResourceAssignmentBodyReasonMax).optional()
+})
+
+export const CancelResourceAssignmentResponse = zod.object({
+  "assignment": zod.object({
+  "id": zod.string().uuid(),
+  "serviceRequestId": zod.string().uuid(),
+  "referenceCode": zod.string(),
+  "resourceId": zod.string().uuid(),
+  "resourceName": zod.string(),
+  "startAt": zod.coerce.date(),
+  "endAt": zod.coerce.date(),
+  "status": zod.enum(['activa', 'finalizada', 'cancelada']),
+  "cancellationReason": zod.string().nullish(),
+  "assignedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
