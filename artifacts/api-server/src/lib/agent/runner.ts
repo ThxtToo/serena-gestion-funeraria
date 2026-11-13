@@ -37,7 +37,8 @@ Reglas estrictas:
 - Las pólizas son ficticias y solo sirven para la demostración académica.
 - No pides más datos personales de los necesarios ni compartes datos de otras personas.
 - Si no puedes resolver algo, ofrece el canal de atención humana con la herramienta contacto_soporte.
-- No reveles claves, rutas internas ni detalles técnicos del sistema.`;
+- No reveles claves, rutas internas ni detalles técnicos del sistema.
+- Responde en texto plano: sin Markdown, sin asteriscos, sin encabezados. Frases cortas.`;
 
 function groqConfig() {
   const apiKey = process.env.GROQ_API_KEY?.trim();

@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Link, Redirect, Route, Switch, useLocation } from "wouter";
 import {
@@ -84,6 +84,31 @@ function AuthLoading() {
   </div>;
 }
 
+
+
+function ChatText({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean);
+
+  return <>{parts.map((part, index) =>
+    part.startsWith("**") && part.endsWith("**") && part.length > 4
+      ? <strong key={index}>{part.slice(2, -2)}</strong>
+      : <span key={index}>{part.replace(/\*+/g, "")}</span>,
+  )}</>;
+}
+
+function ChatScroll({ children, pending }: { children: ReactNode; pending?: boolean }) {
+  const endRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "nearest" });
+  }, [children, pending]);
+
+  return <div style={{ maxHeight: 320, overflowY: "auto", display: "grid", gap: 10, padding: "4px 2px" }} data-testid="chat-scroll">
+    {children}
+    {pending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Serena está escribiendo…</div>}
+    <div ref={endRef} />
+  </div>;
+}
 
 function PublicHome() {
   const offeringsQuery = useListPublicServiceOfferings();
@@ -301,9 +326,10 @@ function PublicAgentBox() {
         {["¿Qué servicios ofrecen?", "Quiero solicitar un servicio", "Quiero hablar con una persona"].map((suggestion) => <button key={suggestion} type="button" className="public-secondary-link" style={{ background: "none", border: "1px solid var(--line)", padding: "8px 10px" }} onClick={() => ask(suggestion)}>{suggestion}</button>)}
       </div>
 
-      {messages.length > 0 && <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
-        {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "92%", padding: "10px 12px", fontSize: 13, whiteSpace: "pre-wrap", borderRadius: 10, background: message.role === "user" ? "var(--green-deep)" : "var(--card)", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line)" }}>{message.content}</div>)}
-        {chat.isPending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Serena está escribiendo…</div>}
+      {messages.length > 0 && <div style={{ marginBottom: 12 }}>
+        <ChatScroll pending={chat.isPending}>
+          {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "92%", padding: "10px 12px", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap", borderRadius: 10, background: message.role === "user" ? "var(--green-deep)" : "var(--card)", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line)" }}><ChatText text={message.content} /></div>)}
+        </ChatScroll>
       </div>}
 
       {error && <div className="public-feedback" role="alert">{error}</div>}
@@ -1670,12 +1696,11 @@ function AgentChatPage({ session }: { session: AuthenticatedSession }) {
           {AGENT_SUGGESTIONS.map((suggestion) => <button key={suggestion} className="quiet-btn" type="button" style={{ textAlign: "left" }} onClick={() => send(suggestion)}>{suggestion}</button>)}
         </div>}
 
-        <div style={{ display: "grid", gap: 12 }}>
-          {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "90%", background: message.role === "user" ? "var(--green, #1f3d2b)" : "transparent", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line, #dcd8cf)", padding: "10px 12px", borderRadius: 10, fontSize: 12, whiteSpace: "pre-wrap" }} data-testid={`message-agent-${message.role}`}>
-            {message.content}
+        <ChatScroll pending={chat.isPending}>
+          {messages.map((message, index) => <div key={index} style={{ justifySelf: message.role === "user" ? "end" : "start", maxWidth: "90%", background: message.role === "user" ? "var(--green-deep)" : "transparent", color: message.role === "user" ? "#fff" : "inherit", border: message.role === "user" ? "none" : "1px solid var(--line)", padding: "10px 12px", borderRadius: 10, fontSize: 12, lineHeight: 1.6, whiteSpace: "pre-wrap" }} data-testid={`message-agent-${message.role}`}>
+            <ChatText text={message.content} />
           </div>)}
-          {chat.isPending && <div style={{ fontSize: 12, color: "var(--muted)" }}>Serena está consultando…</div>}
-        </div>
+        </ChatScroll>
 
         {tools.length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 12 }}>
           {tools.map((tool, index) => <span key={`${tool}-${index}`} className="pill pending">{tool}</span>)}
