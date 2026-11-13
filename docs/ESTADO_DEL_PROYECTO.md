@@ -2,7 +2,7 @@
 
 **Versión del documento:** 0.2
 **Última actualización:** 2026-11-12
-**Fase actual:** Base funcional del portal y del panel privado
+**Fase actual:** Versión demostrable completa para la evaluación
 **Estado general:** Infraestructura y primeros módulos funcionales implementados y compilando
 **Objetivo inmediato:** Completar inventario, recursos e integración del agente de IA.
 
@@ -68,12 +68,12 @@ Las casillas indican que existe una primera versión de cada documento. No signi
 - [x] Recursos operativos, disponibilidad y asignaciones sin solapamientos.
 - [x] Consulta de pólizas ficticias marcadas como demostración.
 - [x] Agente de IA con herramientas controladas por el backend y su pantalla de chat.
+- [x] Canales de atención humana configurables, usados por el agente.
 
 El 2026-11-12 se comprobó en local que el typecheck y la compilación de frontend y backend terminan sin errores, y que la instalación con `--frozen-lockfile` funciona. Ese mismo día se añadió la gestión de estados de solicitudes con historial y pruebas de API para esa funcionalidad. Las pruebas requieren PostgreSQL y quedan a cargo del CI: no se ejecutaron en esa comprobación local.
 
 ### 4.2. Módulos funcionales pendientes
 
-- [ ] Administración de canales de atención.
 - [ ] Gestión completa de usuarios, roles y permisos por empleado.
 - [ ] Verificación de solicitudes mediante códigos temporales.
 - [ ] Panel privado con vistas diferenciadas por rol más allá de la separación actual.

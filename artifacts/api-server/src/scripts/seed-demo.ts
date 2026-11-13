@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import {
+  contactChannelsTable,
   db,
   demoPoliciesTable,
   insurersTable,
@@ -149,6 +150,19 @@ async function main() {
       { policyCode: "DEMO-0002", insurerId: insurerA.id, demoStatus: "vencida" },
       { policyCode: "DEMO-0003", insurerId: insurerB.id, demoStatus: "vigente" },
     ]);
+  }
+
+  const [existingChannel] = await db
+    .select({ id: contactChannelsTable.id })
+    .from(contactChannelsTable)
+    .limit(1);
+
+  if (!existingChannel) {
+    await db.insert(contactChannelsTable).values({
+      type: "telefono",
+      value: "0212-555-0101",
+      label: "Atención 24 horas (ficticio)",
+    });
   }
 
   const [existingRequest] = await db
