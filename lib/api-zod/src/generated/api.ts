@@ -840,3 +840,75 @@ export const AgentChatResponse = zod.object({
 })
 
 
+/**
+ * @summary List configured human support channels
+ */
+export const ListContactChannelsResponse = zod.object({
+  "channels": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['telefono', 'correo', 'whatsapp', 'otro']),
+  "value": zod.string(),
+  "label": zod.string().nullish(),
+  "isActive": zod.boolean()
+}))
+})
+
+
+/**
+ * @summary Register a human support channel
+ */
+export const createContactChannelBodyValueMin = 3;
+export const createContactChannelBodyValueMax = 120;
+
+export const createContactChannelBodyLabelMax = 80;
+
+
+
+export const CreateContactChannelBody = zod.object({
+  "type": zod.enum(['telefono', 'correo', 'whatsapp', 'otro']),
+  "value": zod.string().min(createContactChannelBodyValueMin).max(createContactChannelBodyValueMax),
+  "label": zod.string().max(createContactChannelBodyLabelMax).optional()
+})
+
+export const CreateContactChannelResponse = zod.object({
+  "channel": zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['telefono', 'correo', 'whatsapp', 'otro']),
+  "value": zod.string(),
+  "label": zod.string().nullish(),
+  "isActive": zod.boolean()
+})
+})
+
+
+/**
+ * @summary Update or deactivate a channel
+ */
+export const UpdateContactChannelParams = zod.object({
+  "channelId": zod.coerce.string().uuid()
+})
+
+export const updateContactChannelBodyValueMin = 3;
+export const updateContactChannelBodyValueMax = 120;
+
+export const updateContactChannelBodyLabelMax = 80;
+
+
+
+export const UpdateContactChannelBody = zod.object({
+  "value": zod.string().min(updateContactChannelBodyValueMin).max(updateContactChannelBodyValueMax).optional(),
+  "label": zod.string().max(updateContactChannelBodyLabelMax).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateContactChannelResponse = zod.object({
+  "channel": zod.object({
+  "id": zod.string().uuid(),
+  "type": zod.enum(['telefono', 'correo', 'whatsapp', 'otro']),
+  "value": zod.string(),
+  "label": zod.string().nullish(),
+  "isActive": zod.boolean()
+})
+})
+
+

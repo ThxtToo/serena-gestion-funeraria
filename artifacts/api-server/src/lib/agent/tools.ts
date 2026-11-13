@@ -1,6 +1,7 @@
 import { and, eq, gt, ilike, lt } from "drizzle-orm";
 import { z } from "zod";
 import {
+  contactChannelsTable,
   db,
   demoPoliciesTable,
   insurersTable,
@@ -372,7 +373,26 @@ async function crearSolicitud(raw: unknown): Promise<ToolOutcome> {
   };
 }
 
-function contactoSoporte(): ToolOutcome {
+async function contactoSoporte(): Promise<ToolOutcome> {
+  const configured = await db
+    .select({
+      type: contactChannelsTable.type,
+      value: contactChannelsTable.value,
+      label: contactChannelsTable.label,
+    })
+    .from(contactChannelsTable)
+    .where(eq(contactChannelsTable.isActive, true));
+
+  if (configured.length > 0) {
+    return {
+      ok: true,
+      data: {
+        canal_configurado: true,
+        canales: configured,
+      },
+    };
+  }
+
   const phone = process.env.SERENA_SUPPORT_PHONE?.trim();
   const email = process.env.SERENA_SUPPORT_EMAIL?.trim();
 

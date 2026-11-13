@@ -21,12 +21,13 @@ import {
   useUpdateInventoryItem, useListResources, getListResourcesQueryKey,
   useCreateResource, useUpdateResource, useListRequestAssignments,
   getListRequestAssignmentsQueryKey, useCreateResourceAssignment, useCancelResourceAssignment,
-  useAgentChat,
+  useAgentChat, useListContactChannels, getListContactChannelsQueryKey,
+  useCreateContactChannel, useUpdateContactChannel,
 } from "@workspace/api-client-react";
 import type {
   AuthenticatedSession, AuthenticatedUser, EmployeeCreateResult,
   ServiceOffering, ServiceRequestCreated, ServiceRequestSummary,
-  InventoryItem, Resource,
+  InventoryItem, Resource, ContactChannel,
 } from "@workspace/api-client-react";
 import NotFound from "@/pages/not-found";
 
@@ -1326,6 +1327,67 @@ const AGENT_SUGGESTIONS = [
   "Quiero hablar con una persona",
 ];
 
+
+const CONTACT_CHANNEL_LABELS: Record<ContactChannel["type"], string> = {
+  telefono: "Teléfono",
+  correo: "Correo",
+  whatsapp: "WhatsApp",
+  otro: "Otro",
+};
+
+function SupportChannelsPanel() {
+  const queryClient = useQueryClient();
+  const channelsQuery = useListContactChannels({ query: { queryKey: getListContactChannelsQueryKey() } });
+  const createChannel = useCreateContactChannel();
+  const updateChannel = useUpdateContactChannel();
+  const [type, setType] = useState<ContactChannel["type"]>("telefono");
+  const [value, setValue] = useState("");
+  const [error, setError] = useState("");
+  const channels = channelsQuery.data?.channels ?? [];
+
+  const add = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    createChannel.mutate({ data: { type, value: value.trim() } }, {
+      onSuccess: () => {
+        setValue("");
+        queryClient.invalidateQueries({ queryKey: getListContactChannelsQueryKey() });
+      },
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos guardar el canal.")),
+    });
+  };
+
+  const toggle = (channel: ContactChannel) => {
+    updateChannel.mutate({ channelId: channel.id, data: { isActive: !channel.isActive } }, {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListContactChannelsQueryKey() }),
+      onError: (requestError) => setError(getErrorMessage(requestError, "No pudimos actualizar el canal.")),
+    });
+  };
+
+  return <div className="table-wrap" style={{ marginTop: 18 }}>
+    <h2 className="section-title">Canales de atención humana</h2>
+    <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>El asistente ofrece estos canales cuando la persona pide hablar con alguien. Si no hay ninguno activo, avisa que no está configurado.</p>
+    {channels.length > 0 && <ul style={{ listStyle: "none", padding: 0, margin: "10px 0", display: "grid", gap: 6 }}>
+      {channels.map((channel) => <li key={channel.id} style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12 }}>
+        <span className={`pill ${channel.isActive ? "active" : "inactive"}`}>{CONTACT_CHANNEL_LABELS[channel.type]}</span>
+        <span>{channel.value}</span>
+        <button className="table-action" type="button" onClick={() => toggle(channel)}>{channel.isActive ? "Desactivar" : "Activar"}</button>
+      </li>)}
+    </ul>}
+    {error && <div className="page-inline-error" role="alert">{error}</div>}
+    <form onSubmit={add} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end", marginTop: 8 }}>
+      <div className="field" style={{ margin: 0 }}><label htmlFor="channel-type">Tipo</label><select id="channel-type" value={type} onChange={(event) => setType(event.target.value as ContactChannel["type"])}>
+        <option value="telefono">Teléfono</option>
+        <option value="correo">Correo</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="otro">Otro</option>
+      </select></div>
+      <div className="field" style={{ margin: 0, flex: 1 }}><label htmlFor="channel-value">Dato de contacto</label><input id="channel-value" required minLength={3} maxLength={120} value={value} onChange={(event) => setValue(event.target.value)} placeholder="0212-555-0101" /></div>
+      <button className="secondary-btn" type="submit" disabled={createChannel.isPending} style={{ width: "auto" }}>Añadir</button>
+    </form>
+  </div>;
+}
+
 function AgentChatPage({ session }: { session: AuthenticatedSession }) {
   const chat = useAgentChat();
   const [messages, setMessages] = useState<Array<{ role: "user" | "assistant"; content: string }>>([]);
@@ -1384,6 +1446,8 @@ function AgentChatPage({ session }: { session: AuthenticatedSession }) {
           <button className="primary-btn" type="submit" disabled={chat.isPending || input.trim().length === 0} style={{ width: "auto" }}>{chat.isPending ? "Consultando…" : "Enviar"}</button>
         </form>
       </div>
+
+      {session.user.role === "administrador" && <SupportChannelsPanel />}
     </section>
   </WorkspaceShell>;
 }

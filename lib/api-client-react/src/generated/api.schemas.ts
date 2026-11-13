@@ -602,6 +602,65 @@ export interface AgentReply {
   toolsUsed: string[];
 }
 
+export type ContactChannelType = typeof ContactChannelType[keyof typeof ContactChannelType];
+
+
+export const ContactChannelType = {
+  telefono: 'telefono',
+  correo: 'correo',
+  whatsapp: 'whatsapp',
+  otro: 'otro',
+} as const;
+
+export interface ContactChannel {
+  id: string;
+  type: ContactChannelType;
+  value: string;
+  /** @nullable */
+  label?: string | null;
+  isActive: boolean;
+}
+
+export interface ContactChannelList {
+  channels: ContactChannel[];
+}
+
+export interface ContactChannelResponse {
+  channel: ContactChannel;
+}
+
+export type CreateContactChannelInputType = typeof CreateContactChannelInputType[keyof typeof CreateContactChannelInputType];
+
+
+export const CreateContactChannelInputType = {
+  telefono: 'telefono',
+  correo: 'correo',
+  whatsapp: 'whatsapp',
+  otro: 'otro',
+} as const;
+
+export interface CreateContactChannelInput {
+  type: CreateContactChannelInputType;
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  value: string;
+  /** @maxLength 80 */
+  label?: string;
+}
+
+export interface UpdateContactChannelInput {
+  /**
+     * @minLength 3
+     * @maxLength 120
+     */
+  value?: string;
+  /** @maxLength 80 */
+  label?: string;
+  isActive?: boolean;
+}
+
 export interface ApiError {
   error: string;
 }

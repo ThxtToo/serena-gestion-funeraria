@@ -32,6 +32,9 @@ import type {
   AuthenticatedUser,
   CancelResourceAssignmentInput,
   ChangePasswordInput,
+  ContactChannelList,
+  ContactChannelResponse,
+  CreateContactChannelInput,
   CreateEmployeeInput,
   CreateInventoryItemInput,
   CreateInventoryMovementInput,
@@ -63,6 +66,7 @@ import type {
   ServiceRequestList,
   ServiceRequestStatus,
   SetEmployeeActiveInput,
+  UpdateContactChannelInput,
   UpdateInventoryItemInput,
   UpdateResourceInput,
   UpdateServiceOfferingInput,
@@ -3023,5 +3027,283 @@ export const useAgentChat = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAgentChatMutationOptions(options), queryClient);
+    }
+
+export const getListContactChannelsUrl = () => {
+
+
+
+
+  return `/api/admin/contact-channels`
+}
+
+/**
+ * @summary List configured human support channels
+ */
+export const listContactChannels = async ( options?: Parameters<typeof customFetch>[1]): Promise<ContactChannelList> => {
+
+  return customFetch<ContactChannelList>(getListContactChannelsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListContactChannelsQueryKey = () => {
+    return [
+    `/api/admin/contact-channels`
+    ] as const;
+    }
+
+
+export const getListContactChannelsQueryOptions = <TData = Awaited<ReturnType<typeof listContactChannels>>, TError = ErrorType<ApiError>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListContactChannelsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listContactChannels>>> = ({ signal }) => listContactChannels({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListContactChannelsQueryResult = NonNullable<Awaited<ReturnType<typeof listContactChannels>>>
+export type ListContactChannelsQueryError = ErrorType<ApiError>
+
+
+export function useListContactChannels<TData = Awaited<ReturnType<typeof listContactChannels>>, TError = ErrorType<ApiError>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listContactChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listContactChannels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListContactChannels<TData = Awaited<ReturnType<typeof listContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listContactChannels>>,
+          TError,
+          Awaited<ReturnType<typeof listContactChannels>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListContactChannels<TData = Awaited<ReturnType<typeof listContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List configured human support channels
+ */
+
+export function useListContactChannels<TData = Awaited<ReturnType<typeof listContactChannels>>, TError = ErrorType<ApiError>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listContactChannels>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListContactChannelsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateContactChannelUrl = () => {
+
+
+
+
+  return `/api/admin/contact-channels`
+}
+
+/**
+ * @summary Register a human support channel
+ */
+export const createContactChannel = async (createContactChannelInput: CreateContactChannelInput, options?: Parameters<typeof customFetch>[1]): Promise<ContactChannelResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ContactChannelResponse>(getCreateContactChannelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createContactChannelInput)
+  }
+);}
+
+
+
+
+
+export const getCreateContactChannelMutationKey = () => ['createContactChannel'] as const;
+
+export const getCreateContactChannelMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContactChannel>>, TError,CreateContactChannelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createContactChannel>>, TError,CreateContactChannelMutationVariables, TContext> => {
+
+const mutationKey = getCreateContactChannelMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createContactChannel>>, CreateContactChannelMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createContactChannel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateContactChannelMutationResult = NonNullable<Awaited<ReturnType<typeof createContactChannel>>>
+    export type CreateContactChannelMutationBody = BodyType<CreateContactChannelInput>
+    export type CreateContactChannelMutationError = ErrorType<ApiError>
+    export type CreateContactChannelMutationVariables = {data: BodyType<CreateContactChannelInput>}
+
+    /**
+ * @summary Register a human support channel
+ */
+export const useCreateContactChannel = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createContactChannel>>, TError,CreateContactChannelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createContactChannel>>,
+        TError,
+        CreateContactChannelMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateContactChannelMutationOptions(options), queryClient);
+    }
+
+export const getUpdateContactChannelUrl = (channelId: string,) => {
+
+
+
+
+  return `/api/admin/contact-channels/${channelId}`
+}
+
+/**
+ * @summary Update or deactivate a channel
+ */
+export const updateContactChannel = async (channelId: string,
+    updateContactChannelInput: UpdateContactChannelInput, options?: Parameters<typeof customFetch>[1]): Promise<ContactChannelResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ContactChannelResponse>(getUpdateContactChannelUrl(channelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(updateContactChannelInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateContactChannelMutationKey = () => ['updateContactChannel'] as const;
+
+export const getUpdateContactChannelMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContactChannel>>, TError,UpdateContactChannelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateContactChannel>>, TError,UpdateContactChannelMutationVariables, TContext> => {
+
+const mutationKey = getUpdateContactChannelMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateContactChannel>>, UpdateContactChannelMutationVariables> = (props) => {
+          const {channelId,data} = props ?? {};
+
+          return  updateContactChannel(channelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateContactChannelMutationResult = NonNullable<Awaited<ReturnType<typeof updateContactChannel>>>
+    export type UpdateContactChannelMutationBody = BodyType<UpdateContactChannelInput>
+    export type UpdateContactChannelMutationError = ErrorType<ApiError>
+    export type UpdateContactChannelMutationVariables = {channelId: string;data: BodyType<UpdateContactChannelInput>}
+
+    /**
+ * @summary Update or deactivate a channel
+ */
+export const useUpdateContactChannel = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateContactChannel>>, TError,UpdateContactChannelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateContactChannel>>,
+        TError,
+        UpdateContactChannelMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateContactChannelMutationOptions(options), queryClient);
     }
 

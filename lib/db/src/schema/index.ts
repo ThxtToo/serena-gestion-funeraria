@@ -1,5 +1,6 @@
 export * from "./agent";
 export * from "./auth";
+export * from "./contact-channels";
 export * from "./inventory";
 export * from "./policies";
 export * from "./resources";

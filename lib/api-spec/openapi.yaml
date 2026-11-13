@@ -29,6 +29,8 @@ tags:
     description: Fictional policies used only for the academic demonstration
   - name: agent
     description: Serena assistant restricted to backend tools
+  - name: contact-channels
+    description: Human support channels used by the assistant
 
 paths:
   /healthz:
@@ -1297,6 +1299,122 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /admin/contact-channels:
+    get:
+      operationId: listContactChannels
+      tags: [contact-channels]
+      summary: List configured human support channels
+      security:
+        - SerenaSession: []
+      responses:
+        "200":
+          description: Channels
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactChannelList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createContactChannel
+      tags: [contact-channels]
+      summary: Register a human support channel
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateContactChannelInput"
+      responses:
+        "201":
+          description: Channel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactChannelResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/contact-channels/{channelId}:
+    patch:
+      operationId: updateContactChannel
+      tags: [contact-channels]
+      summary: Update or deactivate a channel
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContactChannelInput"
+      responses:
+        "200":
+          description: Updated channel
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactChannelResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -2199,6 +2317,70 @@ components:
       required:
         - reply
         - toolsUsed
+
+    ContactChannel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [telefono, correo, whatsapp, otro]
+        value:
+          type: string
+        label:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required: [id, type, value, isActive]
+
+    ContactChannelList:
+      type: object
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactChannel"
+      required: [channels]
+
+    ContactChannelResponse:
+      type: object
+      properties:
+        channel:
+          $ref: "#/components/schemas/ContactChannel"
+      required: [channel]
+
+    CreateContactChannelInput:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum: [telefono, correo, whatsapp, otro]
+        value:
+          type: string
+          minLength: 3
+          maxLength: 120
+        label:
+          type: string
+          maxLength: 80
+      required: [type, value]
+
+    UpdateContactChannelInput:
+      type: object
+      additionalProperties: false
+      properties:
+        value:
+          type: string
+          minLength: 3
+          maxLength: 120
+        label:
+          type: string
+          maxLength: 80
+        isActive:
+          type: boolean
 
     ApiError:
       type: object
