@@ -13,7 +13,7 @@ import {
   useChangePassword, useCreateEmployee, useGetAuthSession, useListEmployees,
   useLogin, useLogout, useSetEmployeeActive, useListPublicServiceOfferings,
   useListAdminServiceOfferings, useCreateServiceOffering, useUpdateServiceOffering,
-  useCreateServiceRequest, useListServiceRequests, useGetServiceRequestDetail,
+  useCreateServiceRequest, useGetServiceRequest, useListServiceRequests, useGetServiceRequestDetail,
   useUpdateServiceRequestStatus, getListServiceRequestsQueryKey,
   getGetServiceRequestDetailQueryKey,
   useListInventoryItems, getListInventoryItemsQueryKey, useCreateInventoryItem,
@@ -87,49 +87,182 @@ function AuthLoading() {
 
 function PublicHome() {
   const offeringsQuery = useListPublicServiceOfferings();
-  const channelsQuery = useListPublicContactChannels({ query: { queryKey: getListPublicContactChannelsQueryKey() } });
   const offerings = offeringsQuery.data?.serviceOfferings ?? [];
-  const channels = channelsQuery.data?.channels ?? [];
 
-  return <div className="public-request-layout">
-    <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "18px 20px" }}>
-      <Brand />
-      <Link href="/ingresar" className="quiet-btn" data-testid="link-staff-login"><LockKeyhole size={14} /> Acceso del personal</Link>
+  return <main className="public-home">
+    <header className="public-nav">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <nav aria-label="Navegación principal">
+        <a href="#servicios">Servicios</a>
+        <a href="#proceso">Cómo funciona</a>
+        <Link href="/consultar-solicitud">Consultar solicitud</Link>
+        <Link className="public-nav-staff" href="/ingresar">Acceso del personal</Link>
+      </nav>
     </header>
 
-    <main className="public-request-main">
-      <p className="page-kicker">FUNERARIA SERENA</p>
-      <h1 className="page-title">Acompañamos a la familia en el momento más difícil.</h1>
-      <p className="page-subtitle">Organizamos el servicio con claridad y respeto: velación, traslado, sala y acompañamiento. Si necesitas orientación ahora, envíanos una solicitud y el equipo te contacta.</p>
+    <section className="public-hero">
+      <div className="public-hero-copy">
+        <p className="public-eyebrow">SERENA · ACOMPAÑAMIENTO Y ATENCIÓN</p>
+        <h1>En los momentos difíciles, <em>no tienes que estar a solas.</em></h1>
+        <p className="public-hero-description">
+          Te acompañamos con respeto, sensibilidad y atención organizada.
+          Nuestro equipo está disponible para orientarte y ayudarte a conocer
+          las alternativas de servicio.
+        </p>
+        <div className="public-hero-actions">
+          <Link className="public-primary-link" href="/solicitar-servicio">
+            Solicitar atención <ArrowRight size={16} />
+          </Link>
+          <Link className="public-secondary-link" href="/consultar-solicitud">
+            Consultar mi solicitud
+          </Link>
+        </div>
+        <div className="public-trust-note">
+          <ShieldCheck size={17} />
+          <span>Atención respetuosa · Información tratada con discreción</span>
+        </div>
+      </div>
+      <div className="public-hero-art" aria-label="Composición decorativa de hojas">
+        <div className="public-art-circle public-art-circle-one"></div>
+        <div className="public-art-circle public-art-circle-two"></div>
+        <div className="public-art-leaf">S</div>
+        <span className="public-art-caption">RESPETO · DIGNIDAD · ACOMPAÑAMIENTO</span>
+      </div>
+    </section>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", margin: "18px 0 26px" }}>
-        <Link href="/solicitar-servicio" className="primary-btn" style={{ width: "auto", textDecoration: "none" }} data-testid="link-request-service"><Send size={15} /> Solicitar un servicio</Link>
+    <section className="public-intro-strip">
+      <span>UNA ATENCIÓN MÁS HUMANA</span>
+      <p>Escuchamos tus necesidades y te orientamos en cada paso, con claridad y consideración.</p>
+    </section>
+
+    <section className="public-section" id="servicios">
+      <div className="public-section-heading">
+        <div>
+          <p className="public-eyebrow">NUESTRO CATÁLOGO</p>
+          <h2>Servicios disponibles</h2>
+          <p>Conoce las opciones publicadas por nuestro equipo y solicita información.</p>
+        </div>
+        <Link className="public-text-link" href="/solicitar-servicio">
+          Solicitar un servicio <ArrowRight size={15} />
+        </Link>
       </div>
 
-      <h2 className="section-title">Servicios</h2>
-      {offeringsQuery.isLoading ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Cargando servicios…</p>
-      : offerings.length === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>El catálogo estará disponible en breve.</p>
-      : <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 10 }}>
-          {offerings.map((offering) => <div key={offering.id} className="public-request-card" style={{ padding: 14 }}>
-            <strong style={{ fontSize: 13 }}>{offering.name}</strong>
-            <p style={{ fontSize: 11, color: "var(--muted)", margin: "6px 0 0" }}>{offering.description ?? "Consulta los detalles con el equipo."}</p>
-          </div>)}
+      {offeringsQuery.isLoading ? <div className="public-feedback">Cargando servicios disponibles…</div>
+      : offeringsQuery.isError ? <div className="public-feedback">
+          No pudimos cargar el catálogo.
+          <button className="quiet-btn" onClick={() => offeringsQuery.refetch()}>Reintentar</button>
+        </div>
+      : offerings.length === 0 ? <div className="public-feedback">
+          En este momento no hay servicios publicados. Puedes comunicarte con nuestro equipo mediante el formulario de solicitud.
+        </div>
+      : <div className="public-service-grid">
+          {offerings.map((offering) => <article className="public-service-card" key={offering.id}>
+            <span className="public-service-icon"><BookOpen size={19} /></span>
+            <h3>{offering.name}</h3>
+            <p>{offering.description || "Nuestro equipo puede orientarte sobre este servicio y resolver tus consultas."}</p>
+            <Link href="/solicitar-servicio">Solicitar información <ArrowRight size={14} /></Link>
+          </article>)}
         </div>}
+    </section>
 
-      <h2 className="section-title" style={{ marginTop: 26 }}>Atención humana</h2>
-      {channels.length === 0 ? <p style={{ fontSize: 12, color: "var(--muted)" }}>Los canales de contacto se publicarán pronto. Puedes enviar una solicitud desde el formulario.</p>
-      : <ul style={{ listStyle: "none", padding: 0, margin: "10px 0", display: "grid", gap: 6 }}>
-          {channels.map((channel) => <li key={channel.id} style={{ fontSize: 12 }}>
-            <strong>{channel.label ?? "Contacto"}: </strong>{channel.value}
-          </li>)}
-        </ul>}
-    </main>
+    <section className="public-process" id="proceso">
+      <div className="public-process-heading">
+        <p className="public-eyebrow">TE ACOMPAÑAMOS</p>
+        <h2>Un proceso claro, paso a paso.</h2>
+        <p>Queremos que sepas qué ocurre después de contactar con Serena.</p>
+      </div>
+      <div className="public-steps">
+        <article><span>01</span><h3>Comparte tu solicitud</h3><p>Indícanos tus datos de contacto y el servicio sobre el que deseas recibir orientación.</p></article>
+        <article><span>02</span><h3>Revisamos la información</h3><p>Nuestro equipo recibe la solicitud y revisa los detalles para dar seguimiento.</p></article>
+        <article><span>03</span><h3>Te contactamos</h3><p>Nos comunicaremos contigo para orientarte sobre los siguientes pasos.</p></article>
+      </div>
+    </section>
 
-    <footer className="public-request-footer" style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-      <span>SERENA · Gestión funeraria</span>
-      <span style={{ opacity: 0.7 }}>Demostración académica con datos ficticios</span>
+    <section className="public-cta">
+      <div><p className="public-eyebrow">ESTAMOS PARA ORIENTARTE</p>
+        <h2>Podemos comenzar por escucharte.</h2>
+        <p>Comparte lo que necesitas y nuestro equipo dará seguimiento a tu solicitud.</p>
+      </div>
+      <Link className="public-primary-link" href="/solicitar-servicio">
+        Iniciar solicitud <ArrowRight size={16} />
+      </Link>
+    </section>
+
+    <footer className="public-footer">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <span>Atención con respeto y dignidad.</span>
+      <div><Link href="/consultar-solicitud">Consultar solicitud</Link><Link href="/ingresar">Acceso del personal</Link></div>
+      <small>Plataforma de demostración académica.</small>
     </footer>
-  </div>;
+  </main>;
+}
+
+
+
+function PublicRequestLookup() {
+  const [reference, setReference] = useState("");
+  const [submitted, setSubmitted] = useState("");
+  const normalized = submitted.trim();
+  const requestQuery = useGetServiceRequest(normalized, {
+    query: { enabled: normalized.length > 0, retry: false },
+  });
+
+  const labels: Record<string, string> = {
+    pendiente: "Pendiente de revisión",
+    en_revision: "En revisión",
+    confirmada: "Confirmada",
+    rechazada: "Rechazada",
+    cancelada: "Cancelada",
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (reference.trim()) setSubmitted(reference.trim());
+  };
+
+  return <main className="public-home">
+    <header className="public-nav">
+      <Link href="/" className="public-brand">
+        <span className="public-brand-mark">S</span>
+        <span><strong>Serena</strong><small>GESTIÓN FUNERARIA</small></span>
+      </Link>
+      <nav aria-label="Navegación principal">
+        <Link href="/">Inicio</Link>
+        <Link href="/solicitar-servicio">Solicitar servicio</Link>
+        <Link className="public-nav-staff" href="/ingresar">Acceso del personal</Link>
+      </nav>
+    </header>
+
+    <section className="public-section" style={{ maxWidth: 560, margin: "0 auto" }}>
+      <div className="public-section-heading" style={{ display: "block" }}>
+        <p className="public-eyebrow">SEGUIMIENTO</p>
+        <h2>Consultar mi solicitud</h2>
+        <p>Escribe el código que recibiste al enviar la solicitud, con el formato SER-XXXXXXXXXX.</p>
+      </div>
+
+      <form onSubmit={submit} style={{ marginTop: 18 }}>
+        <div className="field">
+          <label htmlFor="lookup-reference">Código de referencia</label>
+          <input id="lookup-reference" value={reference} maxLength={20} onChange={(event) => setReference(event.target.value)} placeholder="SER-1A2B3C4D5E" />
+        </div>
+        <button className="public-primary-link" type="submit" disabled={requestQuery.isFetching}>{requestQuery.isFetching ? "Consultando…" : "Consultar"}</button>
+      </form>
+
+      {normalized.length > 0 && requestQuery.isError && <div className="public-feedback" style={{ marginTop: 16 }}>No encontramos una solicitud con ese código. Revísalo e inténtalo de nuevo.</div>}
+
+      {requestQuery.data && <div className="public-feedback" style={{ marginTop: 16 }}>
+        <strong>{requestQuery.data.referenceCode}</strong>
+        <p style={{ margin: "6px 0" }}>Estado: {labels[String(requestQuery.data.status)] ?? String(requestQuery.data.status)}</p>
+        <p style={{ margin: 0 }}>{requestQuery.data.message}</p>
+      </div>}
+    </section>
+  </main>;
 }
 
 function SignIn({ session }: { session: AuthenticatedSession | undefined }) {
@@ -1520,6 +1653,7 @@ function AppRoutes() {
   const [location] = useLocation();
   const sessionQuery = useGetAuthSession({ query: { queryKey: getGetAuthSessionQueryKey(), retry: false } });
   if (location === "/solicitar-servicio") return <PublicServiceRequest />;
+  if (location === "/consultar-solicitud") return <PublicRequestLookup />;
   const unauthorized = isUnauthorized(sessionQuery.error);
   const session = unauthorized ? undefined : sessionQuery.data;
   if (sessionQuery.isLoading) return <AuthLoading />;
@@ -1532,6 +1666,7 @@ function AppRoutes() {
   return <Switch>
     <Route path="/">{session ? <Redirect to="/app" /> : <PublicHome />}</Route>
     <Route path="/ingresar"><SignIn session={session} /></Route>
+    <Route path="/consultar-solicitud"><PublicRequestLookup /></Route>
     <Route path="/change-password">{session ? <PasswordChange session={session} /> : <Redirect to="/ingresar" />}</Route>
     <Route path="/app">{session ? <ProtectedRoute session={session}><EmployeeHome session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
     <Route path="/app/solicitudes">{session ? <ProtectedRoute session={session}><StaffServiceRequests session={session} /></ProtectedRoute> : <Redirect to="/ingresar" />}</Route>
