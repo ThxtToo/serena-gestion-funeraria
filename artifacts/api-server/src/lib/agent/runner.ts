@@ -45,7 +45,7 @@ function groqConfig() {
 
   return {
     apiKey,
-    model: process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile",
+    model: process.env.GROQ_MODEL?.trim() || "qwen/qwen3.8-27b",
     baseUrl: (process.env.GROQ_BASE_URL?.trim() || "https://api.groq.com/openai/v1").replace(
       /\/$/,
       "",
