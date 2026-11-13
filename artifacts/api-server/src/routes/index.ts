@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import adminServiceRequestsRouter from "./admin-service-requests";
 import authRouter from "./auth";
 import healthRouter from "./health";
+import inventoryRouter from "./inventory";
 import serviceOfferingsRouter from "./service-offerings";
 import serviceRequestsRouter from "./service-requests";
 
@@ -12,5 +13,6 @@ router.use(authRouter);
 router.use(serviceOfferingsRouter);
 router.use(serviceRequestsRouter);
 router.use(adminServiceRequestsRouter);
+router.use(inventoryRouter);
 
 export default router;

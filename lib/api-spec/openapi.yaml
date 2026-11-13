@@ -21,6 +21,8 @@ tags:
     description: Administrator-only employee account management
   - name: service-request-management
     description: Staff review and status tracking of service requests
+  - name: inventory
+    description: Inventory items and stock movements
 
 paths:
   /healthz:
@@ -646,6 +648,219 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /admin/inventory-items:
+    get:
+      operationId: listInventoryItems
+      tags: [inventory]
+      summary: List inventory items
+      security:
+        - SerenaSession: []
+      responses:
+        "200":
+          description: Inventory items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createInventoryItem
+      tags: [inventory]
+      summary: Create an inventory item
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInventoryItemInput"
+      responses:
+        "201":
+          description: Item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: An item with that name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/inventory-items/{inventoryItemId}:
+    patch:
+      operationId: updateInventoryItem
+      tags: [inventory]
+      summary: Update an inventory item
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: inventoryItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInventoryItemInput"
+      responses:
+        "200":
+          description: Updated item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryItemResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Administrator role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/inventory-items/{inventoryItemId}/movements:
+    get:
+      operationId: listInventoryMovements
+      tags: [inventory]
+      summary: List stock movements of an item
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: inventoryItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Movements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryMovementList"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Staff role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createInventoryMovement
+      tags: [inventory]
+      summary: Register an entry, exit or adjustment
+      description: Entries and exits are available to staff; adjustments require the administrator role and a reason.
+      security:
+        - SerenaSession: []
+      parameters:
+        - name: inventoryItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInventoryMovementInput"
+      responses:
+        "201":
+          description: Movement registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InventoryMovementResult"
+        "400":
+          description: Invalid movement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Not authorized for this movement type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Item not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -1074,6 +1289,208 @@ components:
           maxLength: 500
       required:
         - status
+
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+          nullable: true
+        quantity:
+          type: integer
+        unit:
+          type: string
+        minimumQuantity:
+          type: integer
+        isActive:
+          type: boolean
+        lowStock:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - quantity
+        - unit
+        - minimumQuantity
+        - isActive
+        - lowStock
+        - createdAt
+        - updatedAt
+
+    InventoryItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryItem"
+      required:
+        - items
+
+    InventoryItemResponse:
+      type: object
+      properties:
+        inventoryItem:
+          $ref: "#/components/schemas/InventoryItem"
+      required:
+        - inventoryItem
+
+    CreateInventoryItemInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        category:
+          type: string
+          minLength: 2
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 500
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 30
+        minimumQuantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        initialQuantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+      required:
+        - name
+        - category
+        - unit
+
+    UpdateInventoryItemInput:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        category:
+          type: string
+          minLength: 2
+          maxLength: 60
+        description:
+          type: string
+          maxLength: 500
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 30
+        minimumQuantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        isActive:
+          type: boolean
+
+    InventoryMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inventoryItemId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - entrada
+            - salida
+            - ajuste
+        quantity:
+          type: integer
+        previousQuantity:
+          type: integer
+        newQuantity:
+          type: integer
+        reason:
+          type: string
+          nullable: true
+        performedByUserId:
+          type: string
+          format: uuid
+          nullable: true
+        performedByName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - inventoryItemId
+        - type
+        - quantity
+        - previousQuantity
+        - newQuantity
+        - createdAt
+
+    InventoryMovementList:
+      type: object
+      properties:
+        movements:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryMovement"
+      required:
+        - movements
+
+    CreateInventoryMovementInput:
+      type: object
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          enum:
+            - entrada
+            - salida
+            - ajuste
+        quantity:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        reason:
+          type: string
+          maxLength: 300
+      required:
+        - type
+        - quantity
+
+    InventoryMovementResult:
+      type: object
+      properties:
+        inventoryItem:
+          $ref: "#/components/schemas/InventoryItem"
+        movement:
+          $ref: "#/components/schemas/InventoryMovement"
+      required:
+        - inventoryItem
+        - movement
 
     ApiError:
       type: object

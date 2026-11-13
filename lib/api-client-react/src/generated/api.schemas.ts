@@ -284,6 +284,139 @@ export interface UpdateServiceRequestStatusInput {
   reason?: string;
 }
 
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  /** @nullable */
+  description?: string | null;
+  quantity: number;
+  unit: string;
+  minimumQuantity: number;
+  isActive: boolean;
+  lowStock: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InventoryItemList {
+  items: InventoryItem[];
+}
+
+export interface InventoryItemResponse {
+  inventoryItem: InventoryItem;
+}
+
+export interface CreateInventoryItemInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 2
+     * @maxLength 60
+     */
+  category: string;
+  /** @maxLength 500 */
+  description?: string;
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  unit: string;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  minimumQuantity?: number;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  initialQuantity?: number;
+}
+
+export interface UpdateInventoryItemInput {
+  /**
+     * @minLength 2
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minLength 2
+     * @maxLength 60
+     */
+  category?: string;
+  /** @maxLength 500 */
+  description?: string;
+  /**
+     * @minLength 1
+     * @maxLength 30
+     */
+  unit?: string;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  minimumQuantity?: number;
+  isActive?: boolean;
+}
+
+export type InventoryMovementType = typeof InventoryMovementType[keyof typeof InventoryMovementType];
+
+
+export const InventoryMovementType = {
+  entrada: 'entrada',
+  salida: 'salida',
+  ajuste: 'ajuste',
+} as const;
+
+export interface InventoryMovement {
+  id: string;
+  inventoryItemId: string;
+  type: InventoryMovementType;
+  quantity: number;
+  previousQuantity: number;
+  newQuantity: number;
+  /** @nullable */
+  reason?: string | null;
+  /** @nullable */
+  performedByUserId?: string | null;
+  /** @nullable */
+  performedByName?: string | null;
+  createdAt: string;
+}
+
+export interface InventoryMovementList {
+  movements: InventoryMovement[];
+}
+
+export type CreateInventoryMovementInputType = typeof CreateInventoryMovementInputType[keyof typeof CreateInventoryMovementInputType];
+
+
+export const CreateInventoryMovementInputType = {
+  entrada: 'entrada',
+  salida: 'salida',
+  ajuste: 'ajuste',
+} as const;
+
+export interface CreateInventoryMovementInput {
+  type: CreateInventoryMovementInputType;
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  quantity: number;
+  /** @maxLength 300 */
+  reason?: string;
+}
+
+export interface InventoryMovementResult {
+  inventoryItem: InventoryItem;
+  movement: InventoryMovement;
+}
+
 export interface ApiError {
   error: string;
 }

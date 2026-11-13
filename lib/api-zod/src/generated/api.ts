@@ -407,3 +407,191 @@ export const UpdateServiceRequestStatusResponse = zod.object({
 })
 
 
+/**
+ * @summary List inventory items
+ */
+export const ListInventoryItemsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string().nullish(),
+  "quantity": zod.number().int(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number().int(),
+  "isActive": zod.boolean(),
+  "lowStock": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create an inventory item
+ */
+export const createInventoryItemBodyNameMin = 2;
+export const createInventoryItemBodyNameMax = 120;
+
+export const createInventoryItemBodyCategoryMin = 2;
+export const createInventoryItemBodyCategoryMax = 60;
+
+export const createInventoryItemBodyDescriptionMax = 500;
+
+export const createInventoryItemBodyUnitMax = 30;
+
+export const createInventoryItemBodyMinimumQuantityMin = 0;
+export const createInventoryItemBodyMinimumQuantityMax = 100000;
+
+export const createInventoryItemBodyInitialQuantityMin = 0;
+export const createInventoryItemBodyInitialQuantityMax = 100000;
+
+
+
+export const CreateInventoryItemBody = zod.object({
+  "name": zod.string().min(createInventoryItemBodyNameMin).max(createInventoryItemBodyNameMax),
+  "category": zod.string().min(createInventoryItemBodyCategoryMin).max(createInventoryItemBodyCategoryMax),
+  "description": zod.string().max(createInventoryItemBodyDescriptionMax).optional(),
+  "unit": zod.string().min(1).max(createInventoryItemBodyUnitMax),
+  "minimumQuantity": zod.number().int().min(createInventoryItemBodyMinimumQuantityMin).max(createInventoryItemBodyMinimumQuantityMax).optional(),
+  "initialQuantity": zod.number().int().min(createInventoryItemBodyInitialQuantityMin).max(createInventoryItemBodyInitialQuantityMax).optional()
+})
+
+export const CreateInventoryItemResponse = zod.object({
+  "inventoryItem": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string().nullish(),
+  "quantity": zod.number().int(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number().int(),
+  "isActive": zod.boolean(),
+  "lowStock": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Update an inventory item
+ */
+export const UpdateInventoryItemParams = zod.object({
+  "inventoryItemId": zod.coerce.string().uuid()
+})
+
+export const updateInventoryItemBodyNameMin = 2;
+export const updateInventoryItemBodyNameMax = 120;
+
+export const updateInventoryItemBodyCategoryMin = 2;
+export const updateInventoryItemBodyCategoryMax = 60;
+
+export const updateInventoryItemBodyDescriptionMax = 500;
+
+export const updateInventoryItemBodyUnitMax = 30;
+
+export const updateInventoryItemBodyMinimumQuantityMin = 0;
+export const updateInventoryItemBodyMinimumQuantityMax = 100000;
+
+
+
+export const UpdateInventoryItemBody = zod.object({
+  "name": zod.string().min(updateInventoryItemBodyNameMin).max(updateInventoryItemBodyNameMax).optional(),
+  "category": zod.string().min(updateInventoryItemBodyCategoryMin).max(updateInventoryItemBodyCategoryMax).optional(),
+  "description": zod.string().max(updateInventoryItemBodyDescriptionMax).optional(),
+  "unit": zod.string().min(1).max(updateInventoryItemBodyUnitMax).optional(),
+  "minimumQuantity": zod.number().int().min(updateInventoryItemBodyMinimumQuantityMin).max(updateInventoryItemBodyMinimumQuantityMax).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateInventoryItemResponse = zod.object({
+  "inventoryItem": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string().nullish(),
+  "quantity": zod.number().int(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number().int(),
+  "isActive": zod.boolean(),
+  "lowStock": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary List stock movements of an item
+ */
+export const ListInventoryMovementsParams = zod.object({
+  "inventoryItemId": zod.coerce.string().uuid()
+})
+
+export const ListInventoryMovementsResponse = zod.object({
+  "movements": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "inventoryItemId": zod.string().uuid(),
+  "type": zod.enum(['entrada', 'salida', 'ajuste']),
+  "quantity": zod.number().int(),
+  "previousQuantity": zod.number().int(),
+  "newQuantity": zod.number().int(),
+  "reason": zod.string().nullish(),
+  "performedByUserId": zod.string().uuid().nullish(),
+  "performedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * Entries and exits are available to staff; adjustments require the administrator role and a reason.
+ * @summary Register an entry, exit or adjustment
+ */
+export const CreateInventoryMovementParams = zod.object({
+  "inventoryItemId": zod.coerce.string().uuid()
+})
+
+export const createInventoryMovementBodyQuantityMin = 0;
+export const createInventoryMovementBodyQuantityMax = 100000;
+
+export const createInventoryMovementBodyReasonMax = 300;
+
+
+
+export const CreateInventoryMovementBody = zod.object({
+  "type": zod.enum(['entrada', 'salida', 'ajuste']),
+  "quantity": zod.number().int().min(createInventoryMovementBodyQuantityMin).max(createInventoryMovementBodyQuantityMax),
+  "reason": zod.string().max(createInventoryMovementBodyReasonMax).optional()
+})
+
+export const CreateInventoryMovementResponse = zod.object({
+  "inventoryItem": zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string().nullish(),
+  "quantity": zod.number().int(),
+  "unit": zod.string(),
+  "minimumQuantity": zod.number().int(),
+  "isActive": zod.boolean(),
+  "lowStock": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "movement": zod.object({
+  "id": zod.string().uuid(),
+  "inventoryItemId": zod.string().uuid(),
+  "type": zod.enum(['entrada', 'salida', 'ajuste']),
+  "quantity": zod.number().int(),
+  "previousQuantity": zod.number().int(),
+  "newQuantity": zod.number().int(),
+  "reason": zod.string().nullish(),
+  "performedByUserId": zod.string().uuid().nullish(),
+  "performedByName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
