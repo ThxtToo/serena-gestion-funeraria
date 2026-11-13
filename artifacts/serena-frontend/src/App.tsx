@@ -1589,10 +1589,10 @@ function RequestAssignmentsPanel({ serviceRequestId, suggestedDate }: { serviceR
 
 
 const AGENT_SUGGESTIONS = [
-  "¿Qué servicios tienen disponibles?",
+  "Dame el resumen del día",
+  "¿Qué solicitudes están pendientes?",
+  "¿Qué artículos están bajo mínimo?",
   "¿Hay alguna sala libre mañana a las 3 de la tarde?",
-  "Consulta la póliza de demostración DEMO-0001",
-  "Quiero hablar con una persona",
 ];
 
 
@@ -1688,7 +1688,7 @@ function AgentChatPage({ session }: { session: AuthenticatedSession }) {
     <section className="page-content">
       <p className="page-kicker">ASISTENTE</p>
       <h1 className="page-title">Serena responde.</h1>
-      <p className="page-subtitle">Consulta disponibilidad, revisa una solicitud o verifica una póliza ficticia. El asistente solo usa la información del sistema; si no la tiene, lo dice.</p>
+      <p className="page-subtitle">Asistente interno del equipo: resume la operación del día, lista solicitudes por atender, avisa del inventario bajo y consulta disponibilidad. Solo usa la información del sistema; si no la tiene, lo dice.</p>
 
       <div className="table-wrap" style={{ marginTop: 16 }}>
         {messages.length === 0 && <div style={{ display: "grid", gap: 8, marginBottom: 12 }}>

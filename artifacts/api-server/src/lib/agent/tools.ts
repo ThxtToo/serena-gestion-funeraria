@@ -1,11 +1,12 @@
-import { and, eq, gt, ilike, lt } from "drizzle-orm";
+import { and, asc, eq, gt, ilike, inArray, lt, lte } from "drizzle-orm";
 import { z } from "zod";
 import {
   contactChannelsTable,
   db,
+  inventoryItemsTable,
+  resourceAssignmentsTable,
   demoPoliciesTable,
   insurersTable,
-  resourceAssignmentsTable,
   resourcesTable,
   serviceOfferingsTable,
   serviceRequestsTable,
@@ -28,6 +29,9 @@ export type ToolOutcome =
  * puede ejecutar SQL propio.
  */
 export const AGENT_TOOL_NAMES = [
+  "resumen_operativo",
+  "solicitudes_pendientes",
+  "inventario_bajo",
   "consultar_servicios",
   "consultar_disponibilidad",
   "verificar_poliza_demo",
@@ -39,6 +43,33 @@ export const AGENT_TOOL_NAMES = [
 export type AgentToolName = (typeof AGENT_TOOL_NAMES)[number];
 
 export const AGENT_TOOL_DEFINITIONS = [
+  {
+    type: "function" as const,
+    function: {
+      name: "resumen_operativo",
+      description:
+        "Resumen del día para el personal: solicitudes por atender, artículos bajo mínimo, recursos disponibles y próximas asignaciones.",
+      parameters: { type: "object", additionalProperties: false, properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "solicitudes_pendientes",
+      description:
+        "Lista las solicitudes pendientes y en revisión con su referencia, servicio y fecha de recepción.",
+      parameters: { type: "object", additionalProperties: false, properties: {} },
+    },
+  },
+  {
+    type: "function" as const,
+    function: {
+      name: "inventario_bajo",
+      description:
+        "Lista los artículos activos cuya existencia está en el mínimo o por debajo.",
+      parameters: { type: "object", additionalProperties: false, properties: {} },
+    },
+  },
   {
     type: "function" as const,
     function: {
@@ -144,6 +175,113 @@ export const AGENT_TOOL_DEFINITIONS = [
     },
   },
 ];
+
+
+async function resumenOperativo(): Promise<ToolOutcome> {
+  const openRequests = await db
+    .select({
+      referenceCode: serviceRequestsTable.referenceCode,
+      status: serviceRequestsTable.status,
+      serviceType: serviceRequestsTable.serviceType,
+      createdAt: serviceRequestsTable.createdAt,
+    })
+    .from(serviceRequestsTable)
+    .where(inArray(serviceRequestsTable.status, ["pendiente", "en_revision"]))
+    .orderBy(asc(serviceRequestsTable.createdAt))
+    .limit(20);
+
+  const lowStock = await db
+    .select({
+      name: inventoryItemsTable.name,
+      quantity: inventoryItemsTable.quantity,
+      minimumQuantity: inventoryItemsTable.minimumQuantity,
+      unit: inventoryItemsTable.unit,
+    })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.isActive, true),
+        lte(inventoryItemsTable.quantity, inventoryItemsTable.minimumQuantity),
+      ),
+    );
+
+  const available = await db
+    .select({ name: resourcesTable.name, type: resourcesTable.type })
+    .from(resourcesTable)
+    .where(eq(resourcesTable.status, "disponible"));
+
+  const upcoming = await db
+    .select({
+      referenceCode: serviceRequestsTable.referenceCode,
+      resourceName: resourcesTable.name,
+      startAt: resourceAssignmentsTable.startAt,
+      endAt: resourceAssignmentsTable.endAt,
+    })
+    .from(resourceAssignmentsTable)
+    .innerJoin(serviceRequestsTable, eq(resourceAssignmentsTable.serviceRequestId, serviceRequestsTable.id))
+    .innerJoin(resourcesTable, eq(resourceAssignmentsTable.resourceId, resourcesTable.id))
+    .where(and(eq(resourceAssignmentsTable.status, "activa"), gt(resourceAssignmentsTable.endAt, new Date())))
+    .orderBy(asc(resourceAssignmentsTable.startAt))
+    .limit(5);
+
+  return {
+    ok: true,
+    data: {
+      solicitudes_por_atender: openRequests.length,
+      solicitudes: openRequests.slice(0, 5),
+      articulos_bajo_minimo: lowStock,
+      recursos_disponibles: available.length,
+      proximas_asignaciones: upcoming,
+    },
+  };
+}
+
+async function solicitudesPendientes(): Promise<ToolOutcome> {
+  const rows = await db
+    .select({
+      referenceCode: serviceRequestsTable.referenceCode,
+      status: serviceRequestsTable.status,
+      serviceType: serviceRequestsTable.serviceType,
+      contactName: serviceRequestsTable.contactName,
+      createdAt: serviceRequestsTable.createdAt,
+    })
+    .from(serviceRequestsTable)
+    .where(inArray(serviceRequestsTable.status, ["pendiente", "en_revision"]))
+    .orderBy(asc(serviceRequestsTable.createdAt))
+    .limit(15);
+
+  return {
+    ok: true,
+    data: {
+      total: rows.length,
+      solicitudes: rows,
+      aclaracion: "Ninguna de estas solicitudes está confirmada todavía.",
+    },
+  };
+}
+
+async function inventarioBajo(): Promise<ToolOutcome> {
+  const rows = await db
+    .select({
+      name: inventoryItemsTable.name,
+      category: inventoryItemsTable.category,
+      quantity: inventoryItemsTable.quantity,
+      minimumQuantity: inventoryItemsTable.minimumQuantity,
+      unit: inventoryItemsTable.unit,
+    })
+    .from(inventoryItemsTable)
+    .where(
+      and(
+        eq(inventoryItemsTable.isActive, true),
+        lte(inventoryItemsTable.quantity, inventoryItemsTable.minimumQuantity),
+      ),
+    );
+
+  return {
+    ok: true,
+    data: { total: rows.length, articulos: rows },
+  };
+}
 
 async function consultarServicios(): Promise<ToolOutcome> {
   const rows = await db
@@ -473,6 +611,12 @@ export async function executeTool(
   }
 
   switch (name) {
+    case "resumen_operativo":
+      return resumenOperativo();
+    case "solicitudes_pendientes":
+      return solicitudesPendientes();
+    case "inventario_bajo":
+      return inventarioBajo();
     case "consultar_servicios":
       return consultarServicios();
     case "consultar_disponibilidad":
