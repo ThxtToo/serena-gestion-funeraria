@@ -27,6 +27,8 @@ tags:
     description: Operational resources and their assignment to requests
   - name: demo-policies
     description: Fictional policies used only for the academic demonstration
+  - name: agent
+    description: Serena assistant restricted to backend tools
 
 paths:
   /healthz:
@@ -1243,6 +1245,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /agent/chat:
+    post:
+      operationId: agentChat
+      tags: [agent]
+      summary: Send a message to Serena's assistant
+      description: The assistant can only use the backend tools it is authorized for. It never queries the database directly.
+      security:
+        - SerenaSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentChatInput"
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentReply"
+        "400":
+          description: Invalid message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No valid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Password change required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: The AI provider did not answer correctly
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: The assistant is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     SerenaSession:
@@ -2102,6 +2156,49 @@ components:
           $ref: "#/components/schemas/DemoPolicy"
       required:
         - policy
+
+    AgentChatMessage:
+      type: object
+      additionalProperties: false
+      properties:
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      required:
+        - role
+        - content
+
+    AgentChatInput:
+      type: object
+      additionalProperties: false
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/AgentChatMessage"
+      required:
+        - messages
+
+    AgentReply:
+      type: object
+      properties:
+        reply:
+          type: string
+        toolsUsed:
+          type: array
+          items:
+            type: string
+      required:
+        - reply
+        - toolsUsed
 
     ApiError:
       type: object

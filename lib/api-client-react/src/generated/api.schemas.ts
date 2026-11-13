@@ -572,6 +572,36 @@ export interface DemoPolicyResponse {
   policy: DemoPolicy;
 }
 
+export type AgentChatMessageRole = typeof AgentChatMessageRole[keyof typeof AgentChatMessageRole];
+
+
+export const AgentChatMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface AgentChatMessage {
+  role: AgentChatMessageRole;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  content: string;
+}
+
+export interface AgentChatInput {
+  /**
+     * @minItems 1
+     * @maxItems 12
+     */
+  messages: AgentChatMessage[];
+}
+
+export interface AgentReply {
+  reply: string;
+  toolsUsed: string[];
+}
+
 export interface ApiError {
   error: string;
 }

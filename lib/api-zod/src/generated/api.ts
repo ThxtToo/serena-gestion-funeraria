@@ -817,3 +817,26 @@ export const GetDemoPolicyResponse = zod.object({
 })
 
 
+/**
+ * The assistant can only use the backend tools it is authorized for. It never queries the database directly.
+ * @summary Send a message to Serena's assistant
+ */
+export const agentChatBodyMessagesItemContentMax = 2000;
+
+export const agentChatBodyMessagesMax = 12;
+
+
+
+export const AgentChatBody = zod.object({
+  "messages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(agentChatBodyMessagesItemContentMax)
+})).min(1).max(agentChatBodyMessagesMax)
+})
+
+export const AgentChatResponse = zod.object({
+  "reply": zod.string(),
+  "toolsUsed": zod.array(zod.string())
+})
+
+

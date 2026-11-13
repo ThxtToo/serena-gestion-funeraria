@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import adminServiceRequestsRouter from "./admin-service-requests";
+import agentRouter from "./agent";
 import authRouter from "./auth";
 import demoPoliciesRouter from "./demo-policies";
 import healthRouter from "./health";
@@ -18,5 +19,6 @@ router.use(adminServiceRequestsRouter);
 router.use(inventoryRouter);
 router.use(resourcesRouter);
 router.use(demoPoliciesRouter);
+router.use(agentRouter);
 
 export default router;

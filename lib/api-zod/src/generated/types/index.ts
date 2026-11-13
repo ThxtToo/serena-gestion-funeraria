@@ -8,6 +8,10 @@
 
 export * from './adminEmployee';
 export * from './adminEmployeeRole';
+export * from './agentChatInput';
+export * from './agentChatMessage';
+export * from './agentChatMessageRole';
+export * from './agentReply';
 export * from './apiError';
 export * from './authenticatedSession';
 export * from './authenticatedUser';

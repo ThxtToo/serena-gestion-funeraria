@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { Router, type IRouter } from "express";
 import {
   ApiError,
@@ -7,19 +6,11 @@ import {
   GetServiceRequestParams,
   GetServiceRequestResponse,
 } from "@workspace/api-zod";
-import {
-  db,
-  serviceOfferingsTable,
-  serviceRequestStatusHistoryTable,
-  serviceRequestsTable,
-} from "@workspace/db";
+import { db, serviceRequestsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { createServiceRequestRecord } from "../lib/service-request-creation";
 
 const router: IRouter = Router();
-
-function generateReferenceCode(): string {
-  return `SER-${randomBytes(5).toString("hex").toUpperCase()}`;
-}
 
 router.post("/service-requests", async (req, res) => {
   const parsed = CreateServiceRequestBody.safeParse(req.body);
@@ -34,52 +25,9 @@ router.post("/service-requests", async (req, res) => {
   }
 
   try {
-    const result = await db.transaction(async (tx) => {
-      const [offering] = await tx
-        .select()
-        .from(serviceOfferingsTable)
-        .where(eq(serviceOfferingsTable.id, parsed.data.serviceOfferingId))
-        .limit(1)
-        .for("share");
+    const result = await createServiceRequestRecord(parsed.data);
 
-      if (!offering || !offering.isActive) {
-        return { unavailable: true as const };
-      }
-
-      const [created] = await tx
-        .insert(serviceRequestsTable)
-        .values({
-          referenceCode: generateReferenceCode(),
-          contactName: parsed.data.contactName.trim(),
-          contactPhone: parsed.data.contactPhone.trim(),
-          serviceOfferingId: offering.id,
-          serviceType: offering.name,
-          requestedDate: parsed.data.requestedDate,
-          notes: parsed.data.notes?.trim() || null,
-          status: "pendiente",
-        })
-        .returning({
-          id: serviceRequestsTable.id,
-          referenceCode: serviceRequestsTable.referenceCode,
-          status: serviceRequestsTable.status,
-        });
-
-      // Registro inicial del historial: sin estado anterior y sin usuario,
-      // porque lo genera el sistema al recibir la solicitud.
-      await tx.insert(serviceRequestStatusHistoryTable).values({
-        serviceRequestId: created.id,
-        previousStatus: null,
-        newStatus: "pendiente",
-        changedByUserId: null,
-      });
-
-      return {
-        unavailable: false as const,
-        created,
-      };
-    });
-
-    if (result.unavailable) {
+    if (!result.ok) {
       const error: ApiError = {
         error: "El servicio seleccionado no está disponible.",
       };
@@ -89,8 +37,8 @@ router.post("/service-requests", async (req, res) => {
     }
 
     const response = CreateServiceRequestResponse.parse({
-      referenceCode: result.created.referenceCode,
-      status: result.created.status,
+      referenceCode: result.referenceCode,
+      status: result.status,
       message:
         "Solicitud recibida para revisión. El servicio aún no está confirmado.",
     });
