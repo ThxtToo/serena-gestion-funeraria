@@ -1,0 +1,57 @@
+name: Verificación
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  typecheck-y-pruebas:
+    name: Typecheck y pruebas de API
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: serena
+          POSTGRES_PASSWORD: serena
+          POSTGRES_DB: serena_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://serena:serena@127.0.0.1:5432/serena_test
+      SESSION_SECRET: secreto-solo-para-ci-0000000000000000000000
+      NODE_ENV: test
+      LOG_LEVEL: warn
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck y compilación
+        run: pnpm run build
+
+      - name: Crear esquema en PostgreSQL
+        run: pnpm --filter @workspace/db push-force
+
+      - name: Pruebas de API
+        run: pnpm --filter @workspace/api-server test

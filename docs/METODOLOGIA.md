@@ -83,7 +83,7 @@ Se propone utilizar:
 - PostgreSQL para la persistencia de datos.
 - Drizzle ORM y migraciones para gestionar el esquema de la base de datos.
 - Groq para las funciones de inteligencia artificial mediante el backend.
-- Vitest para pruebas automatizadas.
+- `node:test` con `tsx` para pruebas automatizadas.
 - Git y GitHub para control de versiones y documentación.
 - Replit como entorno de desarrollo, sujeto a la configuración final.
 

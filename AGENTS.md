@@ -37,7 +37,7 @@ La propuesta inicial contempla:
 - Base de datos: PostgreSQL.
 - ORM y migraciones: Drizzle ORM.
 - Inteligencia artificial: Groq, exclusivamente desde el backend.
-- Pruebas: Vitest y pruebas de API.
+- Pruebas: `node:test` con `tsx` (pruebas de API contra PostgreSQL).
 
 Estas tecnologías son la propuesta inicial. Antes de implementarlas, verificar que sean compatibles con el entorno de desarrollo elegido y documentar cualquier cambio.
 

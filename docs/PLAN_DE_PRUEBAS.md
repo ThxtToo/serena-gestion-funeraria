@@ -114,7 +114,7 @@ Un módulo podrá considerarse terminado cuando:
 
 ## 7. Herramientas propuestas
 
-- Vitest para pruebas unitarias.
+- `node:test` con `tsx` para pruebas unitarias y de integración.
 - Herramientas de pruebas HTTP para los endpoints de la API.
 - PostgreSQL para verificar persistencia e integridad.
 - Navegador para pruebas manuales de interfaz.
